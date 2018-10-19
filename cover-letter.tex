@@ -1,0 +1,552 @@
+Associate editor
+===============
+
+1. It is unclear that the new algorithm(s) really advance the current state of the art. 
+2. This problem is observed by two reviewers at least to be not as novel as you say
+3. There is no clear recommendation as when to use this algorithm. 
+4. Recommending the authors to work in getting an algorithm that is optimally efficient (and I would say here, that proving that such optimality is not possible if that is the case).
+5. One reviewer suggests different aggregation functions (while preserving the vectors)
+6. The other suggests other possible simple modifications to A* for addressing the same problem.
+7. Two reviewers at least read the current results in a rather negative way
+8. The last reviewer think that these results are hard to generalize to other domains where the same algorithms could be applied.
+
+ 
+REVIEWER 1
+===========
+1. The main weakness of the paper is that it does not have results for any domain where the proposed kA* algorithm significantly advances the state of the art.
+
+2. Check that the nodes generated in the k independent A* runs of kxA* have a small intersection (for pancakes)
+
+3. At the beginning of 4.1, Fmin and Fmax are introduced somewat abruptly
+-- it would be better to introduce them with some intuition as to why
+these two are particularly interesting.
+
+4. A significant amount of space is spent analyzing kA* variants which 
+use Fmax it's not clear why the authors choose to analyze Fmax in depth -- it
+seems like a lot of effort is spent analyzing a "straw man".
+ Thus, some explanation motivating Fmax should be given early.
+
+5. Table5. for consistency (with Table6), should boldface the best
+results on each row.
+
+9. Fig9. y-axis label: "Time relative to Per Goal"  change to "Time relative to $k times A*$"
+
+10. Some discussion of the k-goal problem in a suboptimal/satisficing setting would be interesting in the related work / conclusion / future work sections. 
+
+** TYPOS:
+
+p.1 kGP is similar but different from --> kGPis similar to but
+different from   => FIXED
+
+p.1 The cost of achieving them is important --> The cost of
+achieving them is an imporant => FIXED 
+
+p.9 it will never decides to insert --> it will never decide to
+insert => FIXED
+
+p.9 we implemented for kA*max only the two Eager approaches (Eager and
+Eager+). --> we implemented only the two Eager approaches (Eager
+and Eager+) for kA*max. => FIXED
+
+p.11 runs the k searches individually --> runs the k searches
+independently => FIXED
+
+p.11 their runtime differ due to --> their runeims differ => FIXED
+
+p.11 adding to OPEN incurs a constant time --> adding to OPEN
+incurs a constant time cost => IGNORED
+
+p12 the algorithm that minimizes the times this cost is
+incurred-->the algorithm that minimizes the number of times this
+cost is incurred--> ==> FIXED
+
+p.16 the search spaces corresponding to finding each of them can be
+them may have --> the search spaces corresponding to finding each
+of them can may have => IGNORED
+
+
+REVIEWER 2
+===========
+1. The motivating example proposed in the introduction
+did not fully convince me, but the problem is so natural and
+fundamental that it does not need much motivation to begin with. 
+
+2. On the negative side, the theoretical study in Section 4 felt quite incomplete: it would have
+been fine in a conference paper, but I would expect a more definitive
+treatment of the question in a journal version.
+
+3. Second negative point is that the
+empirical results are disappointing. A sweet-spot might have been not too far from the
+examined approaches and could have improved the performance quite a
+bit. 
+
+4. At least, if this corner of the
+design space had also been experimentally tested and had shown bad
+performance too (contrary to my intuition), then I'd fine with it, but
+currently it feels like the paper does not tell us how this additional
+natural approach would perform.
+
+5. The paper needs to complete Section 4 into as
+close to a full classification of aggregation functions as possible.
+If some results are too hard too derive, they might be left for future
+work, but they'd need to be explicited and the open problems should be
+clearly stated. 
+
+6. The paper also needs to experimentally examine another
+variant of kA* in Section 7, that I believe is at the same time
+natural, simple to implement, and promising. 
+
+7. Finally, another natural optimization to kA*_min and kA*_max sounds promising and needs to be
+discussed and possibly included in the experimental results. Before I
+get into these three major modification requests, let me list minor
+comments.
+
+8. p1 Related work. I don't think kGP would look similar to TSP to many
+reading, this is more of a red herring. However, multi-objective A*
+has a similar sounding name and clarifying the difference would be
+helpful. Another piece of related work is the K shortest path problems
+(see for instance the K* algorithm in [Aljazzar and Leue, AIJ 2011]
+for a heuristic search approach).
+
+9. p1 I'm not convinced with the amusement park motivation. Either the
+preferences of the different family members can be merged into a
+single utility, in which case the usual A* will do. Or they can't and
+then multi-objective A* is the way to go because it will provide
+points on the Pareto front that can then be examined.
+
+** TYPOS
+
+
+p1 "e.g." -> "e.g.," => FIXED
+p2 Table 1: put the Table captions above the Tables => IGNORED
+p2 Table 1: Gen_i(kA*) is typeset in italics whereas Gen(X) is not. => FIXED
+p4 "$opt_{Pi}$" Latex interprets this as the multiplication 
+between variable o, p, and t_{Pi}. So the spacing between the letters
+is wrong and looks weirds. mathit{opt}_{Pi} can be a solution to
+typesetting multi-letter variables. => FIXED
+p4 Figure 1 -> Fig. 1 (because the class you're using has
+"Fig." as name of the float in the float itself) => FIXED
+p4 "Multiple heuristics per state" -> "4.1 Multiple 
+heuristics per state" add a numbered subsection here. => => TO CONSIDER
+p5 Algorithm 3: line 3 s ->$s$ and line 21 n -> $n$ => FIXED
+p5 Algorithm 3: line 2, line 3, and line 21 the typesetting of
+"ActiveGoals" is inconsistent.==> FIXED
+p5 "Maintaining the set ..." -> "4.2 Maintaining the
+set..." add a numbered subsection here. => => TO CONSIDER
+
+p5 Possibly, I would merge and move these two subsections
+("Multiple heuristics per state" and "Maintaining the
+set ...") into a single subsection and integrate that subsection
+to Section 3 (which would then need a new title). In that situation,
+Section 4 could be dedicated to the theoretical analysis of the
+aggregation of the multiple heuristics. => TO CONSIDER
+
+p6 Name the goals t_i instead of g_i (t stands for target and is the
+dual of s = source), this would avoid the confusing
+"g(g_i)"  => TO CONSIDER
+
+p6 Equation (9) and (10), I'm not sure why you have a strict
+inequality and not leq (but this proof would be subsumed with the
+suggested modifications below anyway) => TO CONSIDER
+
+p6 Equation (9) and (10), the space between < and g(n) is wrong.=> FIXED
+
+p7 "the F value a state" -> "the F value of a state" => FIXED
+p9 Section 6.1 is "Exp" written in italics or upshape? the
+current typesetting is not consistent. => FIXED
+p11 "lines 9-16" -> "lines 9--16" => FIXED
+p12 the space between "=" and "C_h" is missing. => FIXED
+p13 Add the number of heuristic calls to Table 3. => TODO
+p13 Table 3 row 4 "43,489" should be in bold instead of
+"43,531" => FIXED
+p13 Table 3 row 5, 6, 7, the number of states generated in the kA*_min
+group is by Eager and Eager+ is not the same, contradicting the
+textual description in the second paragraph of column 2. => TODO
+
+p13 Table 4 row 4 "5.92" should be in bold instead of "6.98" => FIXED
+
+p13 Table 4 row 1, 2, 3 I'm not sure that the difference between the
+performance of Lazy, Eager, and Eager+ is statistically significant.
+If not, then several entries should be put in bold on each of these
+row. => TODO, ADD STATISTICAL SIGNIFICANCE
+
+p13 Section 7.1 first paragraph. Clarify explicitely whether the
+Octile and Differential heuristic are admissible and/or consistent. => TODO
+
+p14 Fig. 6 swap the order of the tinyurls in the caption to match the
+order of the figures and the order of the text (first min then max). => TODO
+
+p15 Table 5 Add columns for kA*_min and kxA*.=> TODO
+p16 Table 6 Add the number of heuristic calls. => TODO
+p17 Why have two Related Work sections? You already discussed other aspects of the Related Work in the intro. Merge the two discussions. => NOT SURE IF I AGREE
+p18 [16] "epea" -> "EPEA" => FIXED
+p18 [28] the pages are wrong  => FIXED
+p19 [37] "in A." -> "in A*."  => FIXED
+
+
+Major modifications:
+
+===== 1 =====
+Algo 3 maps any aggregation function A: R^k -> R into a variant of
+kA* (we have F_A(n) = g(n) + A(h_1(n), h_2(n), ...)). Let's call this
+variant kA*_A. The current version of the paper characterizes kA*_A
+when A=min and A=max via Theorem 1 and 2. The results are sensible,
+and a little bit surprising (especially Theorem 2). However, the paper
+does not discuss kA*_A for other aggregation functions than min and
+max. A comprehensive study of kA*_A in terms of properties of A would
+make the paper significantly stronger. First, the theory part of the
+paper would be much more elegant and the work would feel complete.
+Second, I strongly suspect it would open the way to better
+experimental results. Given that (I believe that) the technical
+difficulty of such a full classification is within reach, I can only
+encourage the authors to attempt it.
+
+Let me suggest a couple starting points in that direction. I'll use
+the following name convention/numbering: "NTheorem" means a
+new theorem, and "Theorem" refers to a theorem in the
+paper.
+
+* NAxiom 0: A satisfies NAxiom 0 if exists C, forall vector v, A(v) =
+C 
+* NTheorem 0: If A satisfies NAxiom 0, then kA*_A is optimal forall k
+goals.
+Proof idea: this one is easy becayse KA*_A simulates Dijkstra's
+algorithm.
+* NTheorem' 0 (dual to NTheorem 0): For any A that does not satisfy
+NAxiom 0, there exists a problem instance such that kA*_A does not
+return the lowest-cost path to some of the k goals.
+Proof idea: provide a parametric construction of a counter-example.
+
+Our response: This theorem is incorrect, since we know that kA*min is optimal
+and its aggregation function does not return a constant value as required by Axiom 0. 
+
+* NAxiom 1: A satisfies NAxiom 1 if exists C, forall vector v, A(v) =
+min(v) + C
+** Remark: The min aggregation function satisfies NAxiom 1 with C =
+0.
+* NTheorem 1 (same as Theorem 1/Corollary 1 in the paper, only very
+slightly more general): if A satisfies NAxiom 1 and if h are
+admissible, then kA*_A is optimal for all k goals.
+* NTheorem 1' (dual to NTheorem 1, subsumes Observation 1 from the
+paper): For any A that does not satisfy NAxiom 1, there exists a
+problem instance with admissible h such that kA*_A does not return the
+lowest-cost path to some of the k goals.
+Proof idea: provide a parametric construction of a counter-example
+along the lines of Fig 2.
+
+Our response: Again, this is incorrect, since we know that if the heuristic is consistent the kA*max is optimal also
+and max does not satisfy Axion 1. Perhaps the reviewer means that forall vector v there exist C such that the condition in the axiom holds.
+But this is trivial as we can just set $C$ to be A(v)-min(v), and this will hold to any A so it is not much of a property. 
+
+* NAxiom 2: A satisfies NAxiom 2 if forall vector v, w, exists i,
+exists C, A(v) leq v_i + C wedge w_i + C leq A(w).
+** Remark: Most aggregation functions, such as max, min, median,
+projection on column i_0 for any fixed i_0, ..., satisfy NAxiom 2.
+
+
+* NTheorem 2 (subsumes Theorem 2/Corollary 2): If A satisfies NAxiom 2
+and if h are consistent, then kA*_A is optimal for all k goals.
+Proof sketch: see below
+* NTheorem 2' (dual  to NTheorem 2): For any A that does not satisfy
+NAxiom 2, there exists a problem instance with consistent h such that
+kA*_A does not return the lowest-cost path to some of the k goals.
+Proof idea: provide a parametric construction of a counter-example.
+** Remark: (If true) NTheorem 2' is a bit surprising because it shows
+that taking the arithmetic/geometric/harmonic mean of consistent
+heuristics does not guarantee finding the lowest-cost paths to all
+goals. On the other hand, it is possible to use
+arithmetic/geometric/harmonic mean intuitions by rounding up or down
+the result to a value in the input vector.
+
+* NAxiom 3: ??? (I am not sure what the axiom should look like and if
+it is possible at all.)
+* NTheorem 3: If A satisfies NAxiom 3, then kA*_A returns the
+lowest-cost path to at least one goal.
+* NTheorem 3' (dual): For any A that does not satisfy NAxiom 3, there
+exists a problem instance such that kA*_A does not return the
+lowest-cost path to any of the goals.
+
+* NAxiom 4: ??? (I am not 100% sure this is exactly the right axiom,
+it may need tweaking:) A satisfies NAxiom 4 if exists C, forall vector
+v, min(v) + C leq A(v) leq max(v) + C
+* NTheorem 4: If A satisfies NAxiom 4 and if h are admissible, then
+kA*_A returns the lowest-cost path to at least one goal.
+** Remark: It is possible that the returned path to the k-1 other
+goals is not optimal.
+* NTheorem 4' (dual): For any A that does not satisfy NAxiom 4, there
+exists a problem instance with admissible h such that kA*_A does not
+return the lowest-cost path to any of the goals.
+Proof idea: a parametric construction of a counter-example.
+
+* NAxiom 5: ???
+* NTheorem 5: If A satisfies NAxiom 5 and if h are consistent, then
+kA*_A returns the lowest-cost path to at least one goal.
+* NTheorem 5' (dual): For any A that does not satisfy NAxiom 5, there
+exists a problem instance with consistent h such that kA*_A does not
+return the lowest-cost path to any of the goals.
+
+
+
+Together, these 6 axioms and these 12 theorems provide a complete
+picture of the trade-off between assumptions on the heuristics (none,
+admissible, consistent), guarantees on the result (at least one
+optimal, all optimal), and constraints on the aggregation function.
+Since I did not attempt to prove all of the theorems, I am not sure
+that the axioms I suggested are the correct ones and proof attempts
+might reveal a need to adapt them. But hopefully, the approach and
+methodology is clear from the above treatment.
+
+I did look for the proof of NTheorem 2 because I started by trying to
+strengthen the paper's Theorem 2.
+Proof sketch of NTheorem 2.
+(1) Let t be the latest expanded node and assume that it is a goal
+state. Let n be the corresponding node from Lemma 1.
+(2) Apply NAxiom 2 to the vectors h(t) and h(n): exists i, exists C
+such that A(h(n)) leq h_i(n) + C and h_i(t) + C leq A(h(t))
+(3) h_i(n) leq d(n, t) + h_i(t) because h_i is consistent
+(4) g(n) + h_i(n) leq g(n) + d(n, t) + h_i(t) adding g(n) on both
+sides of (3)
+(5) g(n) + h_i(n) leq d(s, t) + h_i(t) from (4) taking advantage of
+the construction of n
+(6) g(n) + A(h(n)) - C leq d(s, t) + A(h(t)) - C combining (2) and
+(5)
+(7) F(n) leq d(s, t) + A(h(t)) cancelling C on both sides of (6) and
+by definition of F.
+(8) F(t) leq F(n) because t is the latest expanded node and n is on
+the open list
+(9) F(t) leq d(s, t) + A(h(t)) combining (7) and (8)
+(10) g(t) + A(h(t)) leq d(s, t) + A(h(t)) using the definition of F in
+(9)
+(11) g(t) leq d(s, t) cancelling A(h(t)) on both sides of (10).
+This proves that we have the optimal path to t.
+
+
+
+Note that for the sake of simplicity, I have assumed here that the
+aggregation was performed on a single vector size with k dimensions.
+In a truly formal treatment, we would consider collections of
+aggregation functions, with one per nb of dimensions. We then say that
+a collection satisfies an NAxiom if each aggregation function
+satisfies the NAxiom.
+
+===== 2 =====
+Besides the theoretical elegance of the classification, a practical
+advantage I see is that it allows to consider other aggregations than
+min and max. In particular, consider a variant where we don't need to
+compute the f value for all dimensions. For instance, let A be defined
+as the aggregation that projects the value of some specific dimension
+and ignores the rest A(..., h_i(n), ...) = h_i(n). 
+1) It is not too hard to prove that A satisfies NAxiom 2, so if h is
+consistent, then kA*_A is optimal for all goals.
+2) Computing F(n) only involves a single heuristic call: h_i(n), so
+this kA*_A variant scales very well with the number of goals.
+3) kA*_A takes advantage of heuristic information, so the search is
+informed and the behaviour should look more like kA*_min than
+UCS/kA*_max in the sense that the algorithm will tend to focus in a
+single direction instead of doing a breadth first search.
+My guess is that kA*_A variant would perform better than UCS and that
+kA*_min in Table 4 because it has the best of both worlds (little
+computation and informed exploration).
+
+Table 3, Table 4, Table 5, and possible Table 6 depending on
+performance, should be updated to also include the performance
+resulting from such a projecting aggregation function. 
+
+===== 3 =====
+If the heuristics are consistent, then it is not always necessary to
+call h k times on each nodes even for min and max. Indeed, sometimes
+we know from the consistency assumption that we can compute the f
+value without full knowledge of all heuristic values. For instance,
+assume we use the min aggregation, let n be a node with h_1(n) = 10
+and h_2(n) = 100 and let's assume there's an (undirected) edge of cost
+1 between n and a child c. If h_2 is consistent, then we know that
+min(h_1(c), h_2(c)) = h_1(c), so we can save some computing time and
+be satisfied that h_2(c) >= h_2(n)-1. Similarly if  c has a child
+d, then even without having computed h_2(c), we can deduce from the
+bound h_2(c) >= h_2(n)-1 that h_2(d) >= h_2(n)-2, and so we
+deduce that min(h_1(d), h_2(d))= h_1(d) with no computation of
+h_2(d).
+
+This optimization might save a large number of heuristic calls and
+improve the speed of kA*_min and kA*_max in Table 4, Table 5, and
+Table 6.
+
+(it might make sense to create new tables to display more cleanly the
+impact of this optimisation, if any).
+
+
+
+REVIEWER 3
+- A better example is that I want a quick lunch, and want to know the distance to several of fast-food chains to me, since I also have preferences over the different chains.
+- The authors should mention this much more prominently in the
+introduction, since what they are really trying to do here is to
+incorporate a heuristic into this algorithm.  In fact, I would add the term
+heuristic somewhere in the title of the paper to emphasize this.
+- For the pancake problem, I'm surprised by the small numbers of
+pancakes, since I thought that the gap heuristic allowed one to solve up to about 60 pancakes optimally.  Nevertheless, the independent searches work best in terms
+of time in every case.
+
+- Thus, my biggest concern with this paper is that the results are
+largely negative.  
+- I'd expect to see a lot more domains.  I think the authors should work
+harder to either improve their algorithms, find some domains where they are
+better than the previous state of the art, or make a compelling case that
+heuristic search for multiple goals is a dead end, perhaps with some explanation
+as to why that might be the case.
+
+
+- There seems to be a typo in Table 4, k=16, where the UCS value is
+lowest and should be highlighted. =>FIXED
+
+In a number of places, the authors refer to "THE shortest
+path", or "THE lowest-cost node", when there could be multiple shortest paths or
+lowest-cost nodes.  These should be changed to "A shortest path", or
+"A lowest-cost node", etc. => FIXED
+
+In several places the authors refer to colors in their figures. 
+Please choose shades that appear distinct in black and white and refer to light and
+dark colors instead. => TODO or IGNORE
+
+"..., it still manages to expandS states in order...",
+should be "..., it still manages to expand states in order..." => FIXED
+
+"...it will never decideS to insert..." should be
+"...it will never decide to insert..." => FIXED
+
+"While both algorithms generate the same set of states, their
+runtime..." 
+should be "While both algorithms generate the same set of states,
+their runtimeS..." => FIXED
+
+"This is intended to serveS...." should be "This is
+intended to serve...." => FIXED
+
+Capitalize "movingai", as this is a proper noun as the name
+of a specific resource.  => FIXED
+
+"We experimented with 2, 4, 8, 16, 32, 64, and 128 number of
+goals (k).  Delete "number" => FIXED
+
+"...computational costS factors..." should be
+"...computational cost factors..." => FIXED
+
+
+REVIEWER 4
+
+-  I am not convinced about the value of this contribution as I detail
+  below.
+-  The authors should describe the context of this
+  problem in the right historical context. Traditionally, the
+  "single-source shortest-path problem" has been described
+as the   problem of finding the shortest paths from a unique starting vertex
+  to all other vertices in the graph. The only differences of that
+  problem with this one are:
+
+  1. Instead of computing the shortest path to all vertices, only a
+     subset of them is considered.
+
+  2. Heuristics are used. From a historical perspective, using
+     heuristics restricts attention to typically one single node. But
+     this is not necessarily true always and, in some domains, there
+     might be an arbitrary number of goals (e.g., logical
+     satisfiability, automated planning, automated checking, etc.)
+
+- First, the problem is not really well motivated. True, the authors
+  make a good attempt at motivating the problem by providing a good
+  number of examples where a good algorithmic approach to this
+  specific problem would be desirable. This is out of question, of
+  course! To truly motivate the problem I would expect the authors to
+  provide a good theoretical study of the significance of this
+  problem. If the graph is given explicitly, the complexity of the
+  shortest-path problem is known to be polynomial in the size of the
+  graph. => Totally ignoring this vague comment.
+  
+- In other cases, the shortest-path problem (for a single
+goal) is known to be exponentially hard. How are these theoretical
+results   affected by the consideration of an arbitrary number of goals? My
+  guess is that adding goals (i.e., making k larger than one) will
+not affect the general results on theoretical complexity of the
+  shortest-path problem ---and section 3.2 provides a good hint. If
+  this is the case, why not focusing on simple search algorithms used
+  for solving the same problem for k=1? => Still ignoring this comment
+
+-  They should have made   more emphasis on analyzing different variants of A* for solving
+this problem
+  - The closed list is never shared among these independent searches. Why have not you
+considered a variant that shares it?
+
+- A* is known to be optimally efficient for this class of
+  problems when k=1. I am not convinced at all about the significance
+  of the results and, in particular, about the importance of section
+  3.1 "sources of improvement" for k>1.  => TODO: DISCUSS THE RELATION BETWEEN A* AND US IN TERMS OF OPTIMAL EFFICIENCY
+  
+  - There is no proof or idea that could suggest that any of the
+  algorithms introduced here is optimally efficient. However, it is
+  clear that there should be an algorithm which is optimally
+efficient for this class of problems. Instead, the authors try to outline
+kind of a tradeoff among different alternatives, as if those were the
+  only ones and one would be forced to pick up one among them. => TODO THINK
+
+- The authors seem to give a "theoretical flavour" to the paper by giving proofs to rather obvious
+statements (such as Lemma 1). 
+- Other parts, however, are more convincing. For
+  example, the approach taken in page 9 where the authors examine the
+  set of nodes expanded by each variant and their relationships. Unfortunately, I found other statements rather disapointing from a theoretical point of view, as the assumption, in page 10 that kxA* and kA*min expand the same set of states. 
+  I do not   think that is done for the ease of presentation, but for the sake
+of convenience. => TODO 
+
+- Why do not you focus on solving one goal, then selecting another goal, and so
+  on (iteratively) until you solve the problem for all goals?
+
+- Why not using k different open lists, one for each goal? In
+  addition, this poses no difficulty to handle inconsistent
+  heuristics. The only drawback would be memory usage, of course, but
+  consider now my recommendation above: for all these k open lists to
+  share the same closed list.
+  
+- Putting all my thoughts in order takes me to suggest a couple of
+  very simple adaptations of A*:
+  One that uses k different open lists and only one closed list. The
+  closed list stores information about all expanded nodes so that
+  re-expansions are never necessary. Unless I am missing a piece, the
+  shortest-path to a second goal that deviates from the shortest-path
+  to the first goal should start with a node in open when the first
+  goal has been solved.
+
+- The latest observation leads to a second simple adapation of A*
+  which uses a single open and a unique closed list: select a goal
+  among the k remaining active goals and solve it. Next, select the
+  next goal to solve and use information from the open/closed lists
+to determine what node to expand next. I understand that this approach
+  poses some challenges. As for one, the open list is sorted in
+  ascending order of f, so that it might be necessary to somehow
+  re-sort nodes or to do something specific to decide what parts of
+  the open list can be reused. This should not be however a major
+  problem as you are currently facing the same difficulty with the
+  Eager/Lazy versions you provide.
+
+-  Even if these simple variants are not possible, they should be
+  mentioned (or others that you could think of) to convince the
+reader of the importance of using k-ary vectors with F-values (as opposed
+  to use single f-values) with all the associated burden. 
+
+- Regarding the significance of the conclusions drawn theoretically
+in   page 12, it seems that the contribution of this paper should be
+  preferred in just one case out of three, but even in that case, it
+  might not be preferred if the goals are distant to each other. This
+  is all too vague as to be considered a guideline that one could use
+  upfron to decide what algorithm to run next when facing a real
+  problem.
+
+ - The experimental section is not very convincing as
+  well. Only two domains are chosen on the basis that one of them
+  entails a problem which is solved in polynomial time in the size of
+  the input, and the other in exponential time. From here, the
+authors repeatedly try to lie out conclusions that apply in general to
+  domains of one type or another. While I think that many conclusions
+  extracted from the analysis performed over the mazes are
+reasonable, the case for the "exponential" domains (exemplified with a
+single domain) might be entirely different if domains with a reduced
+  branching factor and larger depth are considered (as opposed to the
+  larger branching factor of the n-pancake and the rather low depth
+of those instances).
