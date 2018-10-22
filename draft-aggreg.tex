@@ -1,0 +1,164 @@
+\begin{theorem}
+  \label{thm:min-f}
+  If $h_1,\dots,h_k$ are admissible, then \kastarmin is $k$-admissible.
+\end{theorem}
+\begin{proof}
+  The proof is subsumed by that of Theorem~\ref{thm:admissible} below.
+\end{proof}
+
+[[AF: not clear that this is not a repetition. We proved this above. Do we want to claim this again]
+
+\begin{observation}[\kastarmax is not $k$-admissible]
+  \label{obs:max-f-inadmissible}
+  Running \kastarmax may return a path $\pi_i$ from $s$ to $g_i$ that is not optimal.
+\end{observation}
+
+%[[AF: in the theory above you talked about Fmin and here you talk about kastamx. Use kastarmin too.]]\roni{Maybe you looked at an old version?}
+
+To demonstrate Observation~\ref{obs:max-f-inadmissible}, consider the graph in Figure~\ref{fig:max-bad}.
+In this example, using \kastarmax results in the following expansion order: $S$, $B$, $t_1$, and $t_2$.
+Importantly, state $A$ was not expanded, and so the best path returned for $t_1$ goes through $B$ and costs 3.
+A better path to $t_1$ exists, which runs through $A$ and costs only 2.
+
+\begin{figure}
+  \centering
+  \subfloat{
+    \begin{tikzpicture}
+      \node[source]  (s)  at (0, 0.7) {$S$};
+      \node[other]   (a)  at (3, 1.2) {$A$};
+      \node[other]   (b)  at (3, 0.0) {$B$};
+      \node[target1] (t1) at (6, 1.2) {$t_1$};
+      \node[target2] (t2) at (6, 0.0) {$t_2$};
+
+      \draw[->] (s) -- (a) node[midway] (sa) {\phantom{0}};
+      \draw[->] (s) -- (b) node[midway] (sb) {\phantom{0}};
+      \draw[->] (a) -- (t1) node[midway] (at1) {\phantom{0}};
+      \draw[->] (b) -- (t1) node[midway] (bt1) {\phantom{0}};
+      \draw[->] (b) -- (t2) node[midway] (bt2) {\phantom{0}};
+
+      \node[above = -2mm of sa,edgeweight]   {$1$};
+      \node[below = -2mm of sb,edgeweight]   {$1$};
+      \node[above = -2mm of at1,edgeweight]  {$1$};
+      \node[above left = -5mm of bt1,edgeweight]  {$2$};
+      \node[below = -2mm of bt2,edgeweight]  {$3$};
+
+      \node[below = 2mm of  s,infobox] {$h=\tuple{0, 0}$};
+      \node[above = 2mm of  a,infobox] {$h=\tuple{1, 4}$};
+      \node[below = 2mm of  b,infobox] {$h=\tuple{2, 3}$};
+      \node[above = 2mm of t1,infobox] {$h=\tuple{0, 0}$};
+      \node[below = 2mm of t2,infobox] {$h=\tuple{0, 0}$};
+    \end{tikzpicture}
+  }
+  \hfill
+  \subfloat{
+    \begin{tabular}[b]{lccc}
+      \toprule
+      Path & $g$ & $\vect{h}$ & $F$\\
+      \midrule
+      $SB$    & $1$ & $\tuple{2, 3}$ & $4$ \\
+      $SBt_1$ & $3$ & $\tuple{0, 0}$ & $3$ \\
+      $SBt_2$ & $4$ & $\tuple{0, 0}$ & $4$ \\
+      $SA$    & $1$ & $\tuple{1, 4}$ & $5$ \\
+      $SAt_1$ & $2$ & $\tuple{0, 0}$ & $2$ \\
+      \bottomrule
+    \end{tabular}
+  }
+  \caption{An example of where using \kastarmax is not $k$-admissible because it returns a non-optimal solution.
+    Using \kastarmax results in the following expansion order: $S$, $B$, $t_1$.
+    Thus, when $t_1$ is expanded, the best path known to it costs 3, while a better path to $t_1$ goes through $A$ and costs only 2.}
+  \label{fig:max-bad}
+\end{figure}
+
+Note that the heuristic function $h_2$ in Figure~\ref{fig:max-bad} is inconsistent (Definition~\ref{def:consistent}).
+Indeed, we have $h_2(A) = 4 > 0 + 1 = h_2(t_1) + d(A, t_1)$.
+On the other hand, when the heuristics used are consistent then \kastarmax is guaranteed to only return optimal paths:
+% using \maxf{} is possible [[AF: admissible?]], [[AF: I would only use one term KASTARMAX and never use FMAX. Why do you need both. Your call.]]due to the following result.
+
+\begin{theorem}
+  \label{thm:max-f}
+  If $h_1,\dots,h_k$ are consistent, then \kastarmax is $k$-admissible.
+\end{theorem}
+\begin{proof}
+  The proof is subsumed by that of Theorem~\ref{thm:consistent} below.
+\end{proof}
+
+[[AF: again, there is repetitions of work, I think. Say everything only once]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{figure}
+  \centering
+  \subfloat{
+    \begin{tikzpicture}
+    \node[source]  (s)  at (2, 2) {$S$};
+    \node[other]   (a)  at (4, 0) {$A$};
+    \node[target1] (t1) at (2, 0) {$t_1$};
+    \node[target2] (t2) at (4, 2) {$t_2$};
+
+    \draw[->] (s) -- (a)  node[midway] (sa) {\phantom{0}};
+    \draw[->] (s) -- (t1) node[midway] (st1) {\phantom{0}};
+    \draw[->] (a) -- (t1) node[midway] (at1) {\phantom{0}};
+    \draw[->] (a) -- (t2) node[midway] (at2) {\phantom{0}};
+    \draw[->] (s) -- (t2) node[midway] (st2) {\phantom{0}};
+
+    \node[above right = -5mm of sa,edgeweight] {$1$};
+    \node[above = -2mm of st2,edgeweight] {$1$};
+    \node[left  = -2mm of st1,edgeweight] {$3$};
+    \node[below = -2mm of at1,edgeweight] {$3$};
+    \node[right = -2mm of at2,edgeweight] {$1$};
+
+    \node[left  = 2mm of  s,infobox] {$\vect{h}=\vect{0}$};
+    \node[below = 0mm of  a,infobox] {$\vect{h}=\tuple{3, 1}$};
+    \node[left  = 2mm of  t1,infobox] {$\vect{h}=\tuple{0, 9}$};
+    \node[right = 2mm of  t2,infobox] {$\vect{h}=\tuple{9, 0}$};
+  \end{tikzpicture}
+  } \hfill
+  \subfloat{
+    \begin{tabular}[b]{lccc}
+      \toprule
+      Path & $g$ & $\Phi(\vect{h})$ & $F$\\
+      \midrule
+      $St_2$  & $1$ & $0$ & $1$ \\
+      $SA$    & $1$ & $1$ & $2$ \\
+      $St_1$  & $3$ & $0$ & $3$ \\
+      $SAt_1$ & $4$ & $0$ & $4$ \\
+      $SAt_2$ & $2$ & $0$ & $2$ \\
+      \bottomrule
+    \end{tabular}
+  }
+  \caption{An example where running \kastarmin without reordering \open after a goal is expanded results in expanding a redundant state ($A$).}
+  \label{fig:need-resort}
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

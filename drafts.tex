@@ -145,3 +145,29 @@ To this, end we extend the previous notation by having $\Phi$ accepts vectors of
 
 $\vect{h}(n)\gets \tuple{ h_i(n) \mid i\in ActiveGoals }$
 $F\gets g(n)+\Phi(\vect{h}(n))$
+
+
+
+
+
+
+
+%[[AF: In line 23, don't you want to return some of the paths if you have them?]]\roni{I think this will just confuse. The problem is defined for all the $k$ paths.}
+\subsection{Summary}
+[[TODO: New subsection to read]]
+\begin{figure}
+\centering
+\includegraphics[width=0.8\textwidth]{k-goal-approaches}
+\caption{A visual illustration of the different approaches we describe for solving \kgs.}
+\label{fig:approaches}
+\end{figure}
+
+To summarize the discussion so far, we proposed two general approaches for solving \kgs: searching for optimal paths to the $k$ goals sequentially, one goal at a time, and searching for all $k$ optimal paths in parallel.
+In each of these approaches, there is a question of how much information is shared between the searches: one can choose not to share any information between the searches, to share only the most up-to-date $g$ values, and to share also \open and \closed.
+Specifically in the parallel search approach, there is no point in not sharing any information between the searches, and there are two options to share \open and \closed: either by maintaining $k$ \open{}s and synchronizing them, or by maintaining a single \open that aggregates in some way the information from all heuristics.
+Figure~\ref{fig:approaches} illustrates all these approaches and variants for solving \kgs.
+Other variants of this may also exist.
+
+What we have not described yet is how does the parallel search with a single \open aggregates the heuristic values for all goals, and how does the sequential searches choose which goal to solve first. In this work we focus on answering the first question.
+
+[[AF: This is indeed a summary and maybe it can be merged above somehow because there is repetition of text. Anyhow, it would be great to give a name to each of them or at least a sequential number.  And, there is a separation between everybody who only share information to KA* which uses one OPEN. This must be clear]]

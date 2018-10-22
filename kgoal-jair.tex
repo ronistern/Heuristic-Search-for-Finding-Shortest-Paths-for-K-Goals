@@ -18,6 +18,7 @@
 
 \usepackage[smaller]{acronym}
 \acrodef{SPP}{Shortest Path Problem}
+\acrodef{kUCS}{$k$ Uniform Cost Search}
 
 \usepackage{wasysym}
 \usepackage{pifont}% http://ctan.org/pkg/pifont
@@ -49,7 +50,7 @@
 \newcommand{\kastarmax}{\kastarvar{\max}}
 \newcommand{\kastarphi}{\textup{kA}$^*_{\Phi}$\xspace}
 \newcommand{\kxastar}{k$\times$A$^*$\xspace}
-\newcommand{\astari}[1]{A$^*_#1$\xspace}
+\newcommand{\astari}[1]{A$^*_{#1}$\xspace}
 %\newcommand{\newcode}[1]{{\color{blue}[+] #1}}
 \newcommand{\newcode}[1]{#1}
 
@@ -59,6 +60,8 @@
 \newcommand{\open}{\textsc{Open}\xspace}
 \newcommand{\closed}{\textsc{Closed}\xspace}
 \newcommand{\activeg}{\mathcal{A}}
+\newcommand{\respog}{\mathcal{R}}
+\newcommand{\extendedg}{\mathcal{E}}
 \newcommand{\axiomadm}{adm-compat\xspace}
 \newcommand{\axiomcons}{cons-compat\xspace}
 
@@ -523,12 +526,14 @@ where $\Phi$ is a given aggregation function.
 The subscript $\activeg$ in $\Phi_\activeg$ denotes that the heuristic values for non-active goals (i.e., not in $\activeg$) are not aggregated.
 This avoids  unnecessary computations when a node is generated. %, computing heuristics only for the active goals suffices to determine its $F$ value.
  
-We discuss in Section~\ref{sec:aggregating} various design choices of  the heuristic aggregation $\Phi$, how they impact \kastar's behavior, and how they depend on the properties of the given heuristic functions. % Nicer phrasing?
-Meanwhile one can take $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \min_{t_i\in\activeg} h_{t_i}(n)$ or $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \max_{t_i\in\activeg} h_{t_i}(n)$ as reasonable instantiations. 
-
-
-
- 
+We discuss in Section~\ref{sec:aggregating} various design choices of  the heuristic aggregation $\Phi$, how they impact \kastar's behavior with respect to the properties of the given heuristic functions. % Nicer phrasing?
+For now, assume the following natural instantiation of $\Phi$: 
+\begin{equation}
+\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \min_{t_i\in\activeg} h_{t_i}(n) 
+\label{eq:basic-phi-min}
+\end{equation}
+%and \[ \Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \max_{t_i\in\activeg} h_{t_i}(n) \]
+%Meanwhile one can take $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \min_{t_i\in\activeg} h_{t_i}(n)$ or $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \max_{t_i\in\activeg} h_{t_i}(n)$ as reasonable instantiations. 
 
 
 
@@ -549,18 +554,20 @@ Meanwhile one can take $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = 
   \DontPrintSemicolon
   \KwIn{start $s$, goals $t_1, \ldots, t_k$}
   $g(s)\gets 0$; \open~$\gets \emptyset$; \closed~$\gets \emptyset$; \textsc{Solution}~$\gets \emptyset$\;
-  \newcode{$\mathit{ActiveGoals}$ $\gets \{t_1, \ldots, t_k\}$ \nllabel{line:init-active-goals}}\;
-  \newcode{$F\gets$ \texttt{ComputeF}($s$, $\mathit{ActiveGoals}$) \nllabel{line:computeF-start}}\;
-  Add $s$ to \open with key $F$\;
+  \newcode{$\activeg$ $\gets \{t_1, \ldots, t_k\}$ \nllabel{line:init-active-goals}}\;
+  \newcode{Add $s$ to \open with key $F(s) = g(s) + \Phi_{\activeg}(\vect{h}(s))$ \nllabel{line:computeF-start}}\;
   \While {\open $\neq \emptyset$} {
     $\mathit{best} \gets$ a node in \open with the smallest key \nllabel{kastar:line:open:chooseNode}\;
     Move $\mathit{best}$ from \open to \closed\;
     \newcode{
-    \If {$\mathit{best}\in \mathit{ActiveGoals}$}{
+    \If {$\mathit{best}\in \activeg$}{
       \newcode{Add the path to $\mathit{best}$ to \textsc{Solution} \nllabel{line:storePath}}\;
-      \newcode{Remove $\mathit{best}$ from $\mathit{ActiveGoals}$ \nllabel{line:removeGoal}}\;
-      \newcode{\lIf{$\mathit{ActiveGoals}= \emptyset$}{
-                \Return \textsc{Solution} \nllabel{kastar:line:allGoalsFound}}
+      \newcode{Remove $\mathit{best}$ from $\activeg$ \nllabel{line:removeGoal}}\;
+      \newcode{\For{every node $m$ in \open}{
+        Update the key of $m$ to $F(m) = g(m) + \Phi_{\activeg}(\vect{h}(m))$ \nllabel{kastar:line:eager-update}
+      }}
+      \newcode{\lIf{$\activeg = \emptyset$}{
+        \Return \textsc{Solution} \nllabel{kastar:line:allGoalsFound}}
       }
     }}
     \For{every outgoing edge $(\mathit{best}, c)$  \nllabel{kastar:line:nextNeighbor}}{
@@ -575,8 +582,7 @@ Meanwhile one can take $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = 
       }
       % Update n's g and f values
       $g(c)\gets g_{new}$ \\
-      \newcode{$F\gets$ \texttt{ComputeF}($n$, $\mathit{ActiveGoals}$) \nllabel{line:computeF}} \\
-      \newcode{Add $c$ to \open with key $F$} \\
+      \newcode{Add $c$ to \open with key $F(c) = g(c) + \Phi_{\activeg}(\vect{h}(c))$ \nllabel{line:computeF}} \\
     }
   }
   \Return No solution exists \nllabel{kastar:line:noSolution}\\
@@ -585,19 +591,19 @@ Meanwhile one can take $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = 
 \end{algorithm2e}
 
 
-
 Algorithm~\ref{alg:kastar} shows the pseudocode for \kastar. 
 %We highlight the differences between the pseudo code of \astar (Algorithm~\ref{alg:astar}) and the pseudo code of \kastar (Algorithm~\ref{alg:kastar}) by marking every line that was changed or modified with a prefix ``[+]'' and the color blue. %[[AF: so many lines were changed so maybe just give the entire pseudo code. Everyone sees that it has a best-first search behavior]] 
-Initially, all goals are inserted into the set of active goals, denoted  $\mathit{ActiveGoals}$ (line~\ref{line:init-active-goals}).
-Every node $n$ that is added to \open is associated with a value $F$ that is computed by the \texttt{ComputeF} function (lines~\ref{line:computeF-start} and~\ref{line:computeF}).
-\texttt{ComputeF} takes a node $n$ and the set of active goals as arguments. 
-The set of active goals is needed to allow aggregating only the heuristics to these goals when computing the $F$ value, bypassing the need to compute the heuristics for the other goals. 
-%Note that \texttt{ComputeF} accepts the set of active goals.
-%This is done so as to consider only the heuristics to these goals when computing the $F$ value. 
+Initially, all goals are inserted into the set of active goals, denoted  $\activeg$ (line~\ref{line:init-active-goals}).
+Every node $n$ that is added to \open is associated with a $g$ value and a $F$ value.
+Just like in \astar, the $g$ value of a node $n$ is the cost of a lowest-cost path found so far from the start $s$ to $n$.
+The $F$ value is computed as $F(n) = g(n) + \Phi_{\activeg}(\vect{h}(n))$ as discussed above. 
+The set of active goals $\activeg$ is needed to allow aggregating only the heuristics to these goals when computing the $F$ value, bypassing the need to compute the heuristics for the other goals. 
+ 
 In every iteration, the node with the smallest $F$ value is selected and removed from \open (line~\ref{line:open:chooseNode}).
-If it is a goal then we store the path to it (line~\ref{line:storePath}) and remove that goal from the $\mathit{ActiveGoals}$ list (line~\ref{line:removeGoal}).
-Removing this goal from the list of $\mathit{ActiveGoals}$ marks that we are no longer looking for a path to that goal.
-When the $\mathit{ActiveGoals}$ list is empty, we halt the search, having found a path to each goal.
+If it is a goal then we store the path to it (line~\ref{line:storePath}) and remove that goal from the active goal set $\activeg$ (line~\ref{line:removeGoal}).
+Removing this goal from $\activeg$ marks that we are no longer looking for a path to that goal.
+When this happens, we need to update the ordering of the nodes on \open (line~\ref{kastar:line:eager-update}).
+When the $\activeg$ list is empty, we halt the search, having found a path to each goal.
 
 
 % Completeness
@@ -615,391 +621,28 @@ Thus, \kastar is \emph{complete} in the sense that if it does not find a solutio
 \kastar halts and returns a solution after all $k$ goals have been expanded (line~\ref{kastar:line:allGoalsFound}).
 When a state is expanded, it means a path to it has been found.
 Thus, \kastar is \emph{sound}, in the sense that if it returns a solution then that solution contains a path from $s$ to each of the $k$ goals.
-A key question is whether each of these $k$ paths is indeed an optimal path to its corresponding goal.
-As we show in Section~\ref{sec:aggregating}, this depends on how $F$ is computed. %, as encapsulated in the \texttt{ComputeF} function (lines~\ref{line:computeF-start} and~\ref{line:computeF}).
-%[[AF: compute\_f is very related to $\Phi$. I would talk about it]]
+A key question is whether each of these $k$ paths is indeed an optimal path to its corresponding goal. 
+In Section~\ref{sec:aggregating} we prove that 
+using $\Phi$ as defined in Equation~\ref{eq:basic-phi-min} is \emph{admissible}, i.e., indeed leads to returning an optimal path for all goals. In addition, we define sufficient and necessary conditions for admissible aggregation functions, and suggest several alternatives aggregation function that satisfy these conditions. 
 
 %[[AF: In line 23, don't you want to return some of the paths if you have them?]]\roni{I think this will just confuse. The problem is defined for all the $k$ paths.}
-\subsection{Summary}
-[[TODO: New subsection to read]]
-\begin{figure}
-\centering
-\includegraphics[width=0.8\textwidth]{k-goal-approaches}
-\caption{A visual illustration of the different approaches we describe for solving \kgs.}
-\label{fig:approaches}
-\end{figure}
 
-To summarize the discussion so far, we proposed two general approaches for solving \kgs: searching for optimal paths to the $k$ goals sequentially, one goal at a time, and searching for all $k$ optimal paths in parallel.
-In each of these approaches, there is a question of how much information is shared between the searches: one can choose not to share any information between the searches, to share only the most up-to-date $g$ values, and to share also \open and \closed.
-Specifically in the parallel search approach, there is no point in not sharing any information between the searches, and there are two options to share \open and \closed: either by maintaining $k$ \open{}s and synchronizing them, or by maintaining a single \open that aggregates in some way the information from all heuristics.
-Figure~\ref{fig:approaches} illustrates all these approaches and variants for solving \kgs.
-Other variants of this may also exist.
-
-What we have not described yet is how does the parallel search with a single \open aggregates the heuristic values for all goals, and how does the sequential searches choose which goal to solve first. In this work we focus on answering the first question.
-
-[[AF: This is indeed a summary and maybe it can be merged above somehow because there is repetition of text. Anyhow, it would be great to give a name to each of them or at least a sequential number.  And, there is a separation between everybody who only share information to KA* which uses one OPEN. This must be clear]]
-
-\section{Maintaining \open in \kastar} \label{sec:lazy}
-
-For the rest of this paper, we assume that the heuristics $h_1,\ldots, h_k$ are consistent [[AF: then why above did you also assume inconsistent. Maybe assume this for the entire paper and delete everything that has to do with inconsistent heuristics. The paper is too long with details anyway.]]
-Thus, according to Theorems~\ref{thm:min-f} and~\ref{thm:max-f}, when a goal $t_i$ is expanded by either \kastarmax or \kastarmin [[AF: both only mentioned above but not yet defined and the terms were not yet defined and used. Theorems 16 and 18 were not yet given. Try to re-word or to bring the necessary definitions before this claim (or move this to afterwards]] we are guaranteed that the optimal path to it has been found.
-This allows us to safely remove $t_i$ from the set of active goals (see line~\ref{line:removeGoal} in Algorithm~\ref{alg:kastar}).
-Removing a goal from the set of active goals affects how the $F$ values is computed for states generated in subsequent \kastar iterations, as only heuristics for the remaining active goals will be considered.
-Thus, a state may have two different $F$ values associated with it: the $F$ according to which it is ordered in \open and the $F$ value computed according to the current set of active goals.
-When these $F$ values are different we refer to the former $F$ value as \emph{stale} and refer to the latter $F$ value as the \emph{up-to-date} $F$ value. [[AF: you must reorder OPEN now]]
-% However, the states in \open now have \emph{stale} $F$ values, in the sense that the $F$ value according to which they are stored in \open  are different from their current $F$ values, if these were computed now (i.e., w.r.t to current set of active goals).
-%if we would compute their $F$ values now it will be different from  the $F$ value stored for it in \open
-%their $F$ values were computed when the set of active goals was different.
-%\begin{definition}[Stale]
-%    A state $n$ has a stale $F$ value if the set of active goals considered when that $F$ value was computed
-%    is different from the $F$ value of that state when considering the current set of active states.
-%\end{definition}
-
-
-%is beneficial because state generation from here on will be cheaper, as there is no point in computing the heuristic function for goals that are no longer active.
-
-%Removing a goal from the set of active goals has several potential effects. First, computing the state evaluation function for any state generated from here on will be cheaper, as there is no point in computing the heuristic function for goals that are no longer active.
-
-Considering stale $F$ values provides poor guidance to the search, directing it towards goals that are no longer active.
-For example, consider the \kgs problem [[AF: problem twice]] depicted in Figure~\ref{fig:need-resort}.
-The edge weights [[AF: action costs??]] are depicted in blue next to the edges.
-A shortest path to $t_1$ costs 6, consisting of following the edge from $s$ to $t_1$. Similarly, a shortest path to $t_2$ costs 3, going to $t_2$ via $B$.
-After $s$ is expanded there are three states in \open: $t_1$, $B$, and $A$.
-Assume that the heuristics $h_1$ and $h_2$ are perfect and that we use $\min$ as the heuristic aggregation function. [[AF: just fully define Fmin and Fmax above.]]
-Therefore we have $F_{min}(t_1) = \min \tuple{6, 15} = 6$, $F_{min}(B) = \min \tuple{8, 3} = 3$, and $F_{min}(A) = \min \tuple{7, 5} = 5$.
-Thus, $B$ is expanded next, adding $t_2$ to \open with $F_{min}(t_2) = \min \tuple{12, 3} = 3$, which is immediately expanded.
-At this stage \open contains two states: $t_1$ with $F(t_1) = 6$, and $A$ with $F(A) = 5$.
-So $A$ would be expanded, followed by expanding $t_1$ and halting.
-Note that after $t_2$ was expanded, the $F$ values of $t_1$ and $A$ were stale.
-They were computed when $t_2$ was active, and had we re-computed the $F$ values of $A$ and $t_1$ after $t_2$ was expanded, their $F$ values would change to $F(t_1) = 6$ and $F(A) = 7$.
-Using these up-to-date $F$ values, $t_1$ would have been expanded after $t_2$ before $A$.
-At this stage the search would halt, returning the optimal paths to $t_1$ and $t_2$ without ever expanding $A$.
-Indeed, $A$ is a surplus state (Definition~\ref{def:surplus}) with respect to both $t_1$ and $t_2$.
-Thus, considering stale $F$ values can introduce inefficiency to the search.
-
-[[AF: nice example. But, the text has too much past tense "would have been etc". Try to simplify the text]]
-
-\begin{figure}
-  \centering
-  \subfloat{
-    \begin{tikzpicture}
-    \node[source]  (s)  at (2, 2) {$S$};
-    \node[other]   (a)  at (4, 0) {$A$};
-    \node[other]   (b)  at (4, 2) {$B$};
-    \node[target1] (t1) at (2, 0) {$t_1$};
-    \node[target2] (t2) at (6, 0) {$t_2$};
-
-    \draw[->] (s) -- (a)  node[midway] (sa) {\phantom{0}};
-    \draw[->] (s) -- (b)  node[midway] (sb) {\phantom{0}};
-    \draw[->] (s) -- (t1) node[midway] (st1) {\phantom{0}};
-    \draw[->] (a) -- (t1) node[midway] (at1) {\phantom{0}};
-    \draw[->] (a) -- (t2) node[midway] (at2) {\phantom{0}};
-    \draw[->] (b) -- (t2) node[midway] (bt2) {\phantom{0}};
-
-    \node[above right = -5mm of sa,edgeweight] {$1$};
-    \node[above = -2mm of sb,edgeweight] {$1$};
-    \node[left  = -2mm of st1,edgeweight] {$6$};
-    \node[below = -2mm of at1,edgeweight] {$6$};
-    \node[below = -2mm of at2,edgeweight] {$4$};
-    \node[above right = -5mm of bt2,edgeweight] {$2$};
-
-    \node[left  = 2mm of  s,infobox] {$\vect{h}=\vect{0}$};
-    \node[below = 0mm of  a,infobox] {$\vect{h}=\tuple{6, 4}$};
-    \node[right = 2mm of  b,infobox] {$\vect{h}=\tuple{7, 2}$};
-    \node[left  = 2mm of  t1,infobox] {$\vect{h}=\tuple{0, 9}$};
-    \node[right = 2mm of  t2,infobox] {$\vect{h}=\tuple{9, 0}$};
-  \end{tikzpicture}
-  } \hfill
-  \subfloat{
-    \begin{tabular}[b]{lccc}
-      \toprule
-      Path & $g$ & $H$ & $F$\\
-      \midrule
-      $SB$    & $1$ & $2$ & $3$ \\
-      $SBt_2$ & $3$ & $0$ & $3$\\
-      $SA$    & $1$ & $4$ & $5$ \\
-      $St_1$  & $6$ & $0$ & $6$ \\
-      $SAt_1$ & $7$ & $0$ & $7$ \\
-      $SAt_2$ & $5$ & $0$ & $5$ \\
-      \bottomrule
-    \end{tabular}
-  }
-  \caption{An example where running \kastarmin without reordering \open after a goal is expanded results in expanding a redundant state ($A$).}
-  \label{fig:need-resort}
-\end{figure}
-
-%sec:smart-eager
-
-\subsection{Reordering \open eagerly}
-\label{sec:eager}
-One option to avoid using stale $F$ values is to completely reorder \open after removing a goal from the set of active goals (line~\ref{line:removeGoal}).
-This is done by re-computing the state evaluation function (\texttt{ComputeF}) for all states in \open to get their up-to-date $F$ value, and then reordering \open accordingly.
-We refer to this option as \emph{Eager \kastar}. [[AF: I of course like the name. Again, use other names for the other variants above.]]
-Using Eager \kastar can be costly, as it requires reordering \open $k-1$ times. 
-We analyze this runtime overhead incurred due to these reorderings in Section~\ref{sec:resource-analysis}.
-
-Observe that the $F$ value of some states does not become stale when a goal is removed from the set of active goals.
-For example, consider a \kgs instance with 3 goals and a state $n$ with $f$ values $\vect{f}(n)= \tuple{10, 5, 3}$.
-When using \kastarmin, $F(n)=f_3(n)=3$.
-Therefore, the $F$ value of $n$ will only change if the goal $t_3$ is removed from the set of active goals.
-In particular, the $F$ value of $n$ does not become stale when either $t_1$ or $t_2$ are removed from the set of active goals, as this does not change the (up-to-date) $F$ value of $n$. [[AF: You might want to say that if F=3 then the paths to the other nodes was found with $f \leq 3$ and this is why this node is still in OPEN]]
-Consequently, there is no point in to re-computing $F(n)$ when goal $t_1$ or $t_2$ are expanded. More generally, after a goal $t_i$ is expanded there is no need to re-compute the $F$ value of a state if it is not stale  [[AF: there is a need to recompute only for stale nodes]]. %that iof any state for which $F(n)\neq f_i(n)$.
-%expanded there is no need to re-compute the $F$ value of any state for which $F(n)\neq f_i(n)$.
-
-%[[AF: how about principal goal? or key goal?]]
-We implemented this optimization by storing additional information for each node $n$, keeping track of the goal $t_i$ for which $F(n)=f_i(n)$.
-We refer to this goal as the \emph{responsible goal} of $n$.
-If there are multiple responsible goals, we choose one arbitrarily.
-%[[AF: Why? choose them all. Only when it is empty you should re-order open]]
-Then, we re-compute the $F$ value of a node and re-insert [[change its priority] it into \open only if its responsible goal is removed now from the set of active goals. [[AF: if you have two responsible goals and one is removed there is no need to recalculate its value. Of course, you will need to store a list of responsible goals. In fact, you can store a vector of k bits and set the ones that are responsible. Only when this vector is all 0 you need to recalculate the F-value. Outch, this is the version below]][[Roni and Meir: we only keep one responsible node. One could keep a list of responsible, but that seems overly complex. Meir might try anyhow to implement this]]
-This version of Eager \kastar is referred to as Eager$^+$.
-%[[AF: I would not call it eager+. This is an implementation trick for eager and should not have its own sign.]] [[AF: you do not only recompute. You also change its place in \open. If there are too many of these, why not sort \open from scratch?]]
-
-A more involved implementation would keep track of the set of responsible goals for every state.
-I.e., storing for every state $n$ the set of goals for which $f(n)=F(n)$.
-Then, when a goal $g_i$ is expanded, we iterate over every state that had $g_i$ in its set of responsible goals and remove $g_i$ from that set.
-Then, a state will only re-compute its $F$ value (and re-position it in \open accordingly) if its set of responsible goals is empty.
-This approach, however, requires storing more information per state and is more complex, and so we implemented only Eager$^+$ in our experimental evaluation (Section~\ref{sec:experimentalResults}). [[AF: call the new one Eager++?]] %[[AF: OK, you answered me. But, I think this should be the correct way to do eager. I do not like eager+ not in its name and not in its content. By the end of the day, the responsible goal is out of the computation so it does not really matter.]]
-%former approach, which keeps track of a single responsible goal.
-
-%[[AF: the last sentence is not understandable. you keep the set for who? Which nodes? For everybody? please better explain what you mean. I did not understand. Also, consider to delete this all together. You did not implement it so why bother? Maybe in a footnote? But, please better explain for sure.]]
-
-%[[AF: I would delete all the non eager+ from the experiments]]
-
-% Lazy!
-
-[[ARIEL GOT HERE. 24/06/18 at 17:05]]
-
-\subsection{Lazy \kastar}
-% We outlined above an example where the cost of reordering \open after a goal is expanded does not [[AF: I think you want to delete the "not"]]incur significant overhead [[AF: where did you outline this? You just showed that you must reorder open, otherwise, you have more node expansions]]. However, this is not always the case. For example, in domains where the search frontier does not grow exponentially, then states generated after the $k-1$ goal has been expanded are not larger than the states generated up to that point. Indeed, we show in our experimental results that in some domains reordering does, in fact, incur a significant amount of runtime.
-%[[AF: you just said that it is negligible. Please explain why this is not the case in these domains. Are they polynomial?]]
-
-%[[AF: Roni will reword and say that eager can be costly.]]
-
-Both Eager \kastar [[AF: you mean without the responsible goal??, define this]]and Eager$^+$ \kastar will re-compute the $F$ value and reorder [[AF: reorder is used when the entire list is reoredered. You mean that we will have to apply some kind of change-priority for these nodes. Minor issue.]] all the states in \open that have stale $F$ values.
-This incurs a cost that can be significant, as we observed in our experimental evaluation.
-To this end, we propose an alternative approach in which states are re-evaluated and repositioned in \open in a lazy manner.
-This means we re-compute a state's $F$ value only if its responsible goal is not active \emph{and} it is selected for expansion (line~\ref{line:open:chooseNode} in Algorithm~\ref{alg:kastar}).
-Then, we re-insert it into \open only if its $F$ value has increased and it no longer has the minimal $F$ value in \open.
-
-
-We call this algorithm Lazy \kastar, since it is directly inspired by the Lazy \astar algorithm~\cite{betzalel2015typeSystem,tolpin2013toward}, where multiple heuristics are used towards the same goal, and are evaluated lazily in a similar manner.
-Lazy \kastar behaves differently when using \maxf than when using \minf. [[AF: never defined]]
-Thus, we analyze them separately.
-%[[AF: I already said that I think these terms are redundant. Your call]]\roni{I don't see a better way to discuss the different F functions then to name them}
-
-%n particular, the lazy approach only brings benefit to \kastarmin
-
-\subsubsection{Lazy \kastarmin}
-
-Consider running Lazy \kastarmin [[AF: also never defined]] on the graph depicted in Figure~\ref{fig:lazy}.
-This graph is identical to the graph in our previous example Figure~\ref{fig:need-resort}, except that we added a node $C$, with $\vect{h}(C)= \tuple{11, 8}$.
-Lazy \kastarmin behaves exactly as Eager \kastarmin until the first goal is expanded, which in this case is $t_2$.
-At this stage, \open contains $t_1$, $A$, and $C$ with $F$ values 6, 5, and 13, respectively.
-The $F$ values of $A$ and $C$ are stale, and therefore Eager$^+$ \kastarmin (and also Eager \kastarmin) will re-compute their $F$ values and re-insert them into \open.
-Lazy \kastarmin does not do so.
-Instead, it continues with these stale $F$ values, selecting $A$ from \open.
-Lazy \kastarmin  then observes that $F(A)$ is stale and re-computes it.
-The updated $F$ value of $A$ is 7, which is greater than the $F$ value of $t_1$ (=6).
-So, $A$ is re-inserted into \open and the next state selected from \open is $t_1$.
-After expanding $t_1$ the search halts, having an optimal path to both goals.
-As we can see, Lazy \kastarmin did not re-compute the $F$ value of $C$ although it was stale.
-Nonetheless, Lazy \kastarmin did not expand more states than Eager \kastarmin.
-
-\begin{figure}
-  \centering
-  \subfloat{
-    \begin{tikzpicture}
-    \node[source]  (s)  at (2, 2) {$S$};
-    \node[other]   (a)  at (4, 0) {$A$};
-    \node[other]   (b)  at (4, 2) {$B$};
-    \node[other]   (c)  at (0, 0) {$C$};
-    \node[target1] (t1) at (2, 0) {$t_1$};
-    \node[target2] (t2) at (6, 0) {$t_2$};
-
-    \draw[->] (s) -- (a)  node[midway] (sa) {\phantom{0}};
-    \draw[->] (s) -- (b)  node[midway] (sb) {\phantom{0}};
-    \draw[->] (s) -- (c)  node[midway] (sc) {\phantom{0}};
-    \draw[->] (s) -- (t1) node[midway] (st1) {\phantom{0}};
-    \draw[->] (a) -- (t1) node[midway] (at1) {\phantom{0}};
-    \draw[->] (a) -- (t2) node[midway] (at2) {\phantom{0}};
-    \draw[->] (b) -- (t2) node[midway] (bt2) {\phantom{0}};
-
-    \node[above right = -5mm of sa,edgeweight] {$1$};
-    \node[above = -2mm of sb,edgeweight] {$1$};
-    \node[above left = -5mm of sc,edgeweight] {$5$};
-    \node[left  = -2mm of st1,edgeweight] {$6$};
-    \node[below = -2mm of at1,edgeweight] {$6$};
-    \node[below = -2mm of at2,edgeweight] {$4$};
-    \node[above right = -5mm of bt2,edgeweight] {$2$};
-
-    \node[left  = 2mm of  s,infobox] {$\vect{h}=\vect{0}$};
-    \node[below = 0mm of  a,infobox] {$\vect{h}=\tuple{6, 4}$};
-    \node[right = 2mm of  b,infobox] {$\vect{h}=\tuple{7, 2}$};
-    \node[below = 0mm of  c,infobox] {$\vect{h}=\tuple{11, 8}$};
-    \node[below = 1mm of  t1,infobox] {$\vect{h}=\tuple{0, 9}$};
-    \node[right = 2mm of  t2,infobox] {$\vect{h}=\tuple{9, 0}$};
-  \end{tikzpicture}
-  } \hfill
-  \subfloat{
-    \begin{tabular}[b]{lccc}
-      \toprule
-      Path & $g$ & $H$ & $F$\\
-      \midrule
-      $SB$    & $1$ & $2$ & $3$ \\
-      $SBt_2$ & $3$ & $0$ & $3$\\
-      $SA$    & $1$ & $4$ & $5$ \\
-      $St_1$  & $6$ & $0$ & $6$ \\
-      $SAt_1$ & $7$ & $0$ & $7$ \\
-      $SAt_2$ & $5$ & $0$ & $5$ \\
-      $SC$    & $5$ & $8$ & $13$ \\
-      \bottomrule
-    \end{tabular}
-  }
-  \caption{An example of using Lazy \kastarmin.}
-  \label{fig:lazy}
-\end{figure}
-
-More generally, the following Lemma shows that although Lazy \kastarmin does not reorder all the states in \open when a goal is expanded and thus its \open may contain states with stale $F$ values,
-it still manages to expand states in order of their up-to-date $F$ values. % (i.e., according to the $F^u$ value).
-
-%This occurs not just in this example, but in generalWe now prove this observation to the  that this is true not just in this example but in general.
-
-% As a result, $n_2$  and re-position it in \open so that the  Note that the responsible goal for $n_3$ is $g_2$, so when $g_2$ is expanded both Eager \kastarmin and Eager$^+$ \kastarmin will re-compute the $F$ value of $n_3$ (updating it to 16) and re-position it in \open accordingly. Running Lazy \kastarmin will not do so, since  i \kgs our running example from Figure~\ref{fig:need-resort}.  Lazy \kastarmin behaves exactly as Eager \kastarmin until the first goal is expanded, which in this case is $g_2$. Recall that at this stage \open consists $g_1$ and $n_2$, having $\textbf{f}(g_1)=(6,15)$ and  $\textbf{f}(n_2)=(7,5)$. Since $g_1$ and $n_2$ were inserted into \open when both $g_1$ and $g_2$ were active, their $F$ values are $F(g_1)=6$ and $F(n_2)=5$. Both $F$ values are stale, as  if we computed them now (after $g_2$ was removed from the set of active goals), we will have $F(g_1)=6$ and $F(n_2)=7$. Using Eager (or Eager), and are thus stale,  since $g_2$ is now removed from the set of active goals and thus  $F_min().
-%We now prove that although Lazy \kastarmin does not reorder all the states in \open when a goal is expanded, it still expands states in order of their up-to-date $F$ values. % (i.e., according to the $F^u$ value).
-% Lazy with minf is good
-\begin{lemma}[Lazy \kastarmin is a best-first search]
-Lazy \kastarmin always expands the state in \open with the smallest up-to-date $F$ value. % $F^u$
-%Every path $\pi_i$ returned by Lazy \kastarmin is guaranteed to be the lowest-cost path to its corresponding goal ($g_i$).
-\label{the:lazy-minf-correct}
-\end{lemma}
-\begin{proof}
-
-%[[AF: the same sentence is repeated three times.]]
-At a given point in time, a state $n$ may have a stale $F$ value (according to which it is positioned in \open), and an up-to-date $F$ value.
-To differentiate between them, we denote the former by $F(n)$ and the latter by $F^u(n)$.
-Lemma~\ref{the:lazy-minf-correct} thus states that if $n$ is expanded by Lazy \kastarmin then $F(n)=\min_{n'\in \open}F^u(n')$. [[Define this once and present the lemma only once; no need for repetition]]
-We prove this by induction on the iterations of the main loop of Lazy \kastarmin.
-%, showing that Lazy \kastarmin and Eager \kastarmin expand exactly the same set of states.
-The base of the induction is trivial: in the first step $F(s)=F^u(s)$ and \open contains only $s$.
-Now assume that in the first $m-1$ iterations, Lazy \kastarmin expanded the state with the smallest $F^u$ value, and consider the $m^{th}$ iteration of Lazy \kastarmin.
-
-First, observe that $F(n)\leq F^u(n)$ [[AF: I would write: $F^u(n)\geq F(n)$ ]for every state $n$.
-This is because the $F$ value in \kastarmin is the minimum over the $f$ values for the active goals and the set of active goals when $F$ was computed is either the same or a superset of the current set of active goals (according to which $F^u(n)$ is computed).
-
-Now, let $n$ be the state selected for expansion from \open in the $m^{th}$ iteration of Lazy \kastarmin. Hence, it had the smallest $F$-value in \open.
-In addition, $F(n)=F^u(n)$, as otherwise it would have been re-inserted into \open.
-Therefore
-%\[ \forall n'\in\open ~~ F^u_{min}(n)=F_{min}(n)\leq F_{min}(n') \leq F^u_{min}(n') \]
-\[ \forall n'\in\open ~~ F^u(n)=F(n)\leq F(n') \leq F^u(n') \]
-  So, $n$ has the smallest $F^u$ value in \open, as required.
-\end{proof}
-
-[[AF: proof is trivial. You might want to omit it to gain space]
-
-The implication of Lemma~\ref{the:lazy-minf-correct} is that both Lazy \kastarmin and Eager \kastarmin expand states according to their $F^u$ values, except that Lazy \kastarmin does so more efficiently, without the need to reorder all the stale states in \open.
-% [[AF: So you do reorder the entire open list. with Eager. Or do you only insert these nodes that their F values was changed?]]
-
-However, the exact sets of states they expand may be different due to tie breaking.
-For example, consider a tie-breaking rule that chooses the state that has the smallest sum of $f$ values (among the states with the same $F$ value).
-Now, assume that we have two states in \open, $n_1$ and $n_2$, with $\mathbf{f}$ values $\tuple{5, 6, 10 }$ and $\tuple{5, 7, 7}$, respectively.
-They have the same $F$ value (5), but according to this tie-breaking rule \kastarmin will choose $n_2$ before $n_1$.
-Now, assume that $t_3$ was expanded.
-Using Eager \kastarmin would result in $n_1$ now being expanded before $n_2$, while Lazy \kastarmin would not do so.
-Since tie-breaking rules can make a significant difference in performance~\cite{asai2017tieBreaking}, this means that Eager \kastarmin may still outperform Lazy \kastarmin.
-In our experimental results, however, this did not occur and Lazy \kastarmin was in general better. %[[AF: Tie breaking can go either way. You might want to delete all this altogether]]\roni{I don't follow}
-
-[[AF: Tie breaking can go either way. That is, tie breaking can favor each of them and probably on average does not favor anyone more than the other. Thus, you might want to delete this discussion all this altogether, as tie breaking did not provide any surprising experimental results.]]
-% Lazy does not work for Max-f, but  does work on Min-f
-\subsubsection{Lazy \kastarmax}
-
-%Using Lazy \kastarmin has significant impact [[AF: what do you mean, runs faster? explain why?]] in practice. Unfortunately,
-Lemma~\ref{the:lazy-minf-correct} does not transfer to Lazy \kastarmax.
-%Using the Lazy approach for \kastarmax does not have the same effect.
-In fact, we show next that Lazy \kastarmax is equivalent to running \kastarmax that does not reorder \open when a goal is expanded.
-This results in Lazy \kastarmax expanding states with stale $F$ value, even if there are other states in \open whose up-to-date $F$ values are smaller.
-%In fact, Lazy \kastarmax is equivalent to running \kastarmax without reordering \open after a goal is expanded.
-%,and thus it may expand states that do not have the lowest updated $F$ value in \open.
-%[[AF: who is not doing the reordering. Ambiguous. Please precisely say what you mean]].
-%[[AF: recall? I do not remember anything??]]
-As discussed above (and shown in the example in Figure~\ref{fig:need-resort}), this is a negative result since it means that Lazy \kastarmax will be guided towards goals even after the optimal path to them has been found. [[AF: so this algorithm is no-good and should not be used. Do you want to prove theorems on that?]]
-% we cannot apply the lazy approach to \kastarmax and preserve admissibility.
-\begin{theorem}%[Lazy \kastarmax is not a best-first search]
-  Lazy \kastarmax expands exactly the same set of states as \kastarmax, without reordering \open.
-  \label{the:lazy-maxf-bad}
-\end{theorem}
-
-[[Delete the comma. Also, I think that you can call it by name KA*MAX-Basic or something similar. It is very confusing to jump between variants the way you do it]]
-
-\begin{proof}
-  To prove Theorem~\ref{the:lazy-maxf-bad}, we show that if Lazy \kastarmax selects a state from \open it will never decide to insert it back in \open.
-  Let $n$ be a state with the minimal $F$ value in \open.
-  Lazy \kastar decides to re-insert $n$ iff both conditions hold: (1) $F(n)$ is stale, and
-  (2) there is a state $n'$ in \open for which $F(n')<F^u(n)$. %whose $F$ value is smaller than the up-to-date $F$ value of $n$.
-  Assume, by negation, that such a state $n'$ exists.
-  Since $n$ was selected for expansion before $n'$, we have that $F(n)\leq F(n')$.
-  Now, observe that when using \maxf to compute $F$ values, then $F^u(m)\leq F(m)$ for every state $m$.
-  Thus, $F^u(n)\leq F(n) \leq F(n')$, contradicting the assumption that $F(n')<F^u(n)$.
-\end{proof}
-%Consider Figure~\ref{fig:lazy}(a). First $s$ is expanded, generating $n_1$ and $n_2$ with ${\textbf{f}}(n_1)=(10,3)$  and ${\textbf{f}}(n_2)=(7,7)$. Thus, $n_2$ will be expanded, generating $g_1$ and $g_2$, each with a $g$ value of 7.  Assume that the heuristic of $g_1$ and $g_2$ are both zero (for both goals). Then \kastarmax will expand next $g_1$ and $g_2$, never expanding $n_1$ and returning a suboptimal path to $g_2$ of cost 7.
-
-[[AF: ]The main point is that with MAX the f-value can only go down and this will not push it deeper into open.]]
-
-% Using Lazy \kastarmin has significant impact in practice, as it decides in many cases to re-insert into \open the state with the minimal $F$ value. This is not the case in Lazy \kastarmax. In fact, Lazy \kastarmax will \emph{never} re-insert a state into \open after re-computing its $F$ value.
-%To better understand why Lazy \kastarmax This is because re-computing an $F$ value for a state after the set of relevant goals has been reduced will only cause the $F$ value to decrease. Thus, is a state already has the smallest $F$ value in \open, it will still have the smallest $F$ value after we re-compute its $F$ value.
-For this reason, we implemented only the two Eager approaches (Eager and Eager$^+$) for \kastarmax.
-
-%[[AF: not clear. You never used lazy? What two approaches. This entire section needs some more rewording as I said. I think I do want to see this section 5 again.]]
-
-%[[AF:  As I said above, I think we only need eager and the exact implementation is less important. That is, I do not like the term eager+. Your call]]
-
-
-\subsubsection{Lazy for General Aggregation Functions}
-[[TODO: New subsection to read]]
-Next, we ask the question of which heuristic aggregation functions can use Lazy \kastar and obtain  an admissible results (i.e., optimal paths to all goals). [[AF: I would summarize that eager and eager+ are always good. Lazy is OK for min but not for max. And now, we want to know what further with other functions]]
-To this end, we somewhat abuse [[AF: is this the correct word? You now use it on any size of vector up to k. Maybe you are widening it? Generalizing?]] the previous notation by defining $\Phi$ as an aggregation function that can accept vectors of different sizes,  specifically any size between 1 and $k$.
-Common aggregation functions such as $\max$, $\min$, and average are all such functions, as we can apply them to vectors of different sizes. 
-
-\begin{definition}
-We say that a heuristic aggregation function $\Phi$ is \emph{isotone} if for any vector $\vect{v}$ and every subset of this vector $\vect{v'}$ it holds that $\Phi(\vect{v'})\leq \Phi(\vect{v})$.
-Conversely, $\Phi$ is called \emph{antitone} if $\Phi(\vect{v'})\geq \Phi(\vect{v})$ for every vector $\vect{v}$ and every subset of it $\vect{v'}$.
-\end{definition}
-
-[[AF: you mean that with a subset it never gets larger. The term "monotonically" usually means that as time passes and something progresses. Here, you delete items. So, maybe use a different term. Something from set theory. I do not have anything in mind. Maybe reverse the term: if when adding more items you may get a smaller value you are monotonically non-increasing and vise versa]][[AS: How about now?]]
-
-$\min$ and $\max$ are trivial examples of, respectively, antitone and isotone aggregation functions.
-[[AF: add that Max and Min are trivial examples of non-increasing/]]
-%We now provide sufficient conditions for identifying an aggregation function that can be used with Lazy \kastar, and when these conditions results in an effective use of Lazy \kastar.
-\begin{theorem}
-  If a heuristic aggregation function $\Phi$ is antitone then Lazy \kastar using $\Phi$ always expands the state with the smallest up-to-date $F$ value
-\end{theorem}
-\begin{proof}
-Let $\Phi$ be an antitone heuristic aggregation function, $n$ be a node chosen for expansion, and $n'$ be some other node in \open.
-Now, assume that the $F$ value of $n'$ was computed w.r.t. a set of active goals $A$ and that the current set of active goals is $A'\subset A$.
-We denote by $A(n)$ and $A(n')$ [[AF: You used $\vect{h}(n)$ for this ]] the vector of heuristic values for $n$ and $n'$, respectively, that correspond to the heuristics towards the goals in $A$. 
-$A'(n)$ and $A'(n')$ are defined similarly. [[AF: for the set of active goals]]
-
-$n$ is chosen for expansion so its $F$ value is up-to-date, so $F(n)=g(n)+\Phi(A'(n))$, and also the smallest in \open, so $F(n)\leq F(n')=g(n')+\Phi(A(n'))$.
-Since $\Phi$ is antitone, $F(n')\leq F^u(n')$, as required.  [[AF: intuitively, for a subset of goals the aggregated value can on only increase so choosing it now as the minimal node in open is safe.]]
-\end{proof}
-
-\begin{observation}
-  \label{obs:genMaxNoLazy}
-  If a heuristic aggregation function $\Phi$ is isotone then Lazy \kastar using $\Phi$ will expands exactly the same set of states as \kastar without reordering \open.
-\end{observation}
-Observation~\ref{obs:genMaxNoLazy} is a straightforward generalization of Theorem~\ref{the:lazy-maxf-bad},
-since for every $n$ having the minimal $F$ value and a set of active goals $A$ and its subset $A'$ it holds that $F(n)=g(n)+\Phi(A(n))\geq g(n)+\Phi(A'(n))=F^u(n)$. 
-
-[[AF: say a few words about eager?]]
-
-[[AF: also I am wondering whether there are better functions than min?]]
+% What we have not described yet is how does the parallel search with a single \open aggregates the heuristic values for all goals, and how does the sequential searches choose which goal to solve first. In this work we focus on answering the first question.
+%[[AF: This is indeed a summary and maybe it can be merged above somehow because there is repetition of text. Anyhow, it would be great to give a name to each of them or at least a sequential number.  And, there is a separation between everybody who only share information to KA* which uses one OPEN. This must be clear]]
 
 \section{Aggregating Heuristic Values}
 [[AF: some connecting sentences to tell me where I am??]]
-
 \input{sec-aggregating}
 
 [[AF: again, some connecting sentences can help out here]]
+
+
+
+
+\section{Maintaining \open in \kastar}
+\label{sec:lazy}
+
+\input{lazy.tex}
 
 
 %\section{Theoretical Analysis of the Resource Usage}

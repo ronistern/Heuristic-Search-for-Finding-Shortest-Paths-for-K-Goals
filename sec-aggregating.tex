@@ -1,21 +1,23 @@
 \label{sec:aggregating}
 
-[[TODO: Updated section to read]]
+We denote by \kastarphi the instantiation of \kastar that uses a given aggregation function $\Phi$. In the rest of this section, we examine under which assumptions on $\Phi$ and on the heuristics $\vect{h}$ we can obtain optimality guarantees on \kastarphi.
+As we shall see, there is a tradeoff between the two types of assumptions: making stronger assumptions on the heuristics leads to a
+larger class of aggregation functions that guarnatee optimality. %optimality for a larger range of aggregation functions. [[AF: not sure what the sentence means: it means optimallity]][[AS: Better now?]
+
+Before analyzing the different aggregation functions and heuristics,  we provide the following definitions and invariant which holds in \kastar regardless of how the heuristics and $\Phi$ are computed.
 
 \begin{definition}
-  An algorithm for the \kgs is \emph{$k$-admissible} if in any instance, for all reachable goals $t_i$, the first path found to $t_i$ is optimal.
+  An algorithm for the \kgs is \emph{admissible} if in any instance, for all reachable goals $t_i$, the first path found to $t_i$ is optimal.
   An algorithm for the \kgs is \emph{$1$-admissible} if in any instance, there exists a goal $t_i$ such that the first path found to $t_i$ is optimal.
+  [[Roni: do we need this 1-admissible? I rather we called this admissible]]
 \end{definition}
 \abda{check 1-admissible definition in case some goals are not reachable}
 
-%In \astar{} for a single goal, states are prioritized in \open according to the $f=g+h$ value of a state. In contrast, a state in \kastar{} has a vector of $k$ heuristic values $\vect{h}(n)$ and consequently a vector of $f$ values $\vect{f}$(n) that contains one $f$ value per goal. Therefore, \kastar{} requires a state evaluation function that aggregates these $f$ values in some way. In Algorithm~\ref{alg:k-goal-bfs} this is encapsulated in the {\tt ComputeF} function. We refer to the value ($F$) returned by this function as the state's $F$ value, and consider the following two options for computing it.
-We consider the following two options for computing the $F$ value of a state:  
-\begin{align}
-  \text{\minf} =& g(n) + \min_{i\in [1,k]}h_i(n) \\
-  \text{\maxf} =& g(n) + \max_{i\in [1,k]}h_i(n)
-\end{align}
-\kastar that uses \minf as the state evaluation function is referred to hereinafter as \kastarmin, and similarly \kastar that uses \maxf is referred to as \kastarmax. [[AF: If this was not already defined earlier then put this earlier. No need to re-define]]
-Before analyzing the theoretical properties of \kastarmin and \kastarmax, we provide the following invariant which holds in \kastar regardless of how the $F$ values are computed.
+Since we defined \kgs for graphs with non-negative edge costs, we limit the discussion to non-negative heuristic functions and correspondingly heuristic aggregation functions that accept non-negative values. Formally,   
+\begin{definition}
+  Let $k$ be a fixed positive integer.
+  A \emph{heuristic aggregation function} is a function $\Phi: \nonnegreals^k \rightarrow \nonnegreals$ such that $\Phi(\vect{0}) = 0$, where $\vect{0}$ is the $k$-dimensional zero vector.
+\end{definition}
 
 \begin{lemma}
   \label{lem:simple}
@@ -23,146 +25,68 @@ Before analyzing the theoretical properties of \kastarmin and \kastarmax, we pro
 \end{lemma}
 
 Lemma~\ref{lem:simple} can be proven by induction over the iterations of \kastar.
-Namely, it trivially holds in the first iteration and continues to hold in subsequent iterations because when a state with $g(\cdot) + d(s,\cdot) = d(s, t_i)$ is expanded then one of its children must also have $g(\cdot) + d(s,\cdot) = d(s, t_i)$.
+Namely, it trivially holds in the first iteration and continues to hold in subsequent iterations because when a node with $g(\cdot) + d(s,\cdot) = d(s, t_i)$ is expanded then one of its children must also have $g(\cdot) + d(s,\cdot) = d(s, t_i)$.
 An equivalent to Lemma~\ref{lem:simple} has been proven for many other best-first search algorithms.
 
 \begin{lemma}[Completeness]
   \label{lem:completeness}
-  If a goal state is reachable, then it is eventually expanded by \kastar. [[AF: but not necessarily optimal]
+  If a goal is reachable, then it is eventually expanded by \kastar. 
+  %[[AF: but not necessarily optimal]
 \end{lemma}
+Note that Lemma~\ref{lem:completeness} does not say that the optimal path to each goal will be found. This requires some restrictions over the heuristics and aggregation function used, as we discuss next. 
 
-\begin{theorem}
-  \label{thm:min-f}
-  If $h_1,\dots,h_k$ are admissible, then \kastarmin is $k$-admissible.
-\end{theorem}
-\begin{proof}
-  The proof is subsumed by that of Theorem~\ref{thm:admissible} below.
-\end{proof}
+\subsection{Consistent Heuristics}
 
-[[AF: not clear that this is not a repetition. We proved this above. Do we want to claim this again]
+We begin our exploration by considering the case where all heuristic functions are \emph{consistent} (Definition~\ref{def:consistent}). 
 
-\begin{observation}[\kastarmax is not $k$-admissible]
-  \label{obs:max-f-inadmissible}
-  Running \kastarmax may return a path $\pi_i$ from $s$ to $g_i$ that is not optimal.
-\end{observation}
-
-%[[AF: in the theory above you talked about Fmin and here you talk about kastamx. Use kastarmin too.]]\roni{Maybe you looked at an old version?}
-
-To demonstrate Observation~\ref{obs:max-f-inadmissible}, consider the graph in Figure~\ref{fig:max-bad}.
-In this example, using \kastarmax results in the following expansion order: $S$, $B$, $t_1$, and $t_2$.
-Importantly, state $A$ was not expanded, and so the best path returned for $t_1$ goes through $B$ and costs 3.
-A better path to $t_1$ exists, which runs through $A$ and costs only 2.
-
-\begin{figure}
-  \centering
-  \subfloat{
-    \begin{tikzpicture}
-      \node[source]  (s)  at (0, 0.7) {$S$};
-      \node[other]   (a)  at (3, 1.2) {$A$};
-      \node[other]   (b)  at (3, 0.0) {$B$};
-      \node[target1] (t1) at (6, 1.2) {$t_1$};
-      \node[target2] (t2) at (6, 0.0) {$t_2$};
-
-      \draw[->] (s) -- (a) node[midway] (sa) {\phantom{0}};
-      \draw[->] (s) -- (b) node[midway] (sb) {\phantom{0}};
-      \draw[->] (a) -- (t1) node[midway] (at1) {\phantom{0}};
-      \draw[->] (b) -- (t1) node[midway] (bt1) {\phantom{0}};
-      \draw[->] (b) -- (t2) node[midway] (bt2) {\phantom{0}};
-
-      \node[above = -2mm of sa,edgeweight]   {$1$};
-      \node[below = -2mm of sb,edgeweight]   {$1$};
-      \node[above = -2mm of at1,edgeweight]  {$1$};
-      \node[above left = -5mm of bt1,edgeweight]  {$2$};
-      \node[below = -2mm of bt2,edgeweight]  {$3$};
-
-      \node[below = 2mm of  s,infobox] {$h=\tuple{0, 0}$};
-      \node[above = 2mm of  a,infobox] {$h=\tuple{1, 4}$};
-      \node[below = 2mm of  b,infobox] {$h=\tuple{2, 3}$};
-      \node[above = 2mm of t1,infobox] {$h=\tuple{0, 0}$};
-      \node[below = 2mm of t2,infobox] {$h=\tuple{0, 0}$};
-    \end{tikzpicture}
-  }
-  \hfill
-  \subfloat{
-    \begin{tabular}[b]{lccc}
-      \toprule
-      Path & $g$ & $\vect{h}$ & $F$\\
-      \midrule
-      $SB$    & $1$ & $\tuple{2, 3}$ & $4$ \\
-      $SBt_1$ & $3$ & $\tuple{0, 0}$ & $3$ \\
-      $SBt_2$ & $4$ & $\tuple{0, 0}$ & $4$ \\
-      $SA$    & $1$ & $\tuple{1, 4}$ & $5$ \\
-      $SAt_1$ & $2$ & $\tuple{0, 0}$ & $2$ \\
-      \bottomrule
-    \end{tabular}
-  }
-  \caption{An example of where using \kastarmax is not $k$-admissible because it returns a non-optimal solution.
-    Using \kastarmax results in the following expansion order: $S$, $B$, $t_1$.
-    Thus, when $t_1$ is expanded, the best path known to it costs 3, while a better path to $t_1$ goes through $A$ and costs only 2.}
-  \label{fig:max-bad}
-\end{figure}
-
-Note that the heuristic function $h_2$ in Figure~\ref{fig:max-bad} is inconsistent (Definition~\ref{def:consistent}).
-Indeed, we have $h_2(A) = 4 > 0 + 1 = h_2(t_1) + d(A, t_1)$.
-On the other hand, when the heuristics used are consistent then \kastarmax is guaranteed to only return optimal paths:
-% using \maxf{} is possible [[AF: admissible?]], [[AF: I would only use one term KASTARMAX and never use FMAX. Why do you need both. Your call.]]due to the following result.
-
-\begin{theorem}
-  \label{thm:max-f}
-  If $h_1,\dots,h_k$ are consistent, then \kastarmax is $k$-admissible.
-\end{theorem}
-\begin{proof}
-  The proof is subsumed by that of Theorem~\ref{thm:consistent} below.
-\end{proof}
-
-[[AF: again, there is repetitions of work, I think. Say everything only once]]
-
-
-
-%[[AF: I do not like the term maxf and do not like that you say that it is admissible without exactly defining what you mean. Can you omit this and only talk on kastarmax]]\roni{Fixed}. [[ARIEL UP TO HERE]]
-
-[[AF: maybe we just talk on the general case first and then mention that max and min are special cases?]]
-\subsection{General Heuristic Aggregation Functions}
-The operators $\min$ and $\max$ are two ways to aggregate the heuristic values of a given node, but \kastar can also be implemented with other aggregation functions, functions that accept a vector of $k$ values and output a single value.
-\begin{definition}
-  Let $k$ be a fixed positive integer.
-  A \emph{heuristic aggregation function} is a function $\Phi: \nonnegreals^k \rightarrow \nonnegreals$ such that $\Phi(\vect{0}) = 0$, where $\vect{0}$ is the $k$-dimensional zero vector.
-\end{definition}
-\kastar can use such a function to computes the $F$ value of a node $n$, as $F(n) = g(n) + \Phi(\vect{h}(n))$, where $\vect{h}(n)$ is the vector $\tuple{h_1(n), h_2(n), \dots, h_k(n)}$.
-We denote the resulting algorithm as \kastarphi.
-%Such a heuristic aggregation function accepts a vector of $k$ heuristic values of a node  and outputs a single value, which is then used by \kastar to compute node's $F$ value.  Formally,
-
-In the rest of this section, we examine under which assumptions on $\Phi$ and on the heuristics $\vect{h}$ we can obtain optimality guarantees on \kastarphi.
-As we shall see, there is a tradeoff between the two types of assumptions.
-Making stronger assumptions on the heuristics leads to optimality for a larger range of aggregation functions. [[AF: not sure what the sentence means: it means optimallity]][[AS: Better now?]
-
-\subsection{Arbitrary Heuristics}
-%\abda{$\Phi$ needs to be constant $0$.}
 
 \begin{definition}
-  \label{def:ucs}
-  \emph{Uniform Cost Search (UCS)} is the \kastarvar{0} algorithm where the heuristic aggregation function is the constant 0 function which maps any vector to value 0.
+A heuristic aggregation function $\Phi$ is \emph{\axiomcons} iff for every vectors $\vect{v}$ and $\vect{u}$, we have that if there exists $i$ such that  $u_i = 0$ then $\Phi(\vect{v}) - \Phi(\vect{u}) \leq \max (\vect{v}-\vect{u})$.
 \end{definition}
+By $u_i$ we refer the $i^{th}$ element in $\vect{u}$. 
 
-UCS coincides with Dijkstra's algorithm~\cite{DIJ59,SoCS2011Felner}, a best-first search without a heuristic which prioritizes nodes based on their $g$ values alone.
-As a result, UCS finds the optimal path to every reachable state, including every reachable goal---it is $k$-admissible.
-
-\begin{theorem}
-  \label{thm:arbitrary}
-  For any \kgs and for any tuple of heuristics, UCS is $k$-admissible.
-\end{theorem}
-
-UCS does not use any heuristic information and is guaranteed to find the optimal path for each goal.
-On the other hand, we can show that UCS is the only \kastar instantiation that is $k$-admissible with arbitrary heuristics.
+%\abda{Alternative names: \emph{metric}, \emph{weak contraction}. See \url{https://en.wikipedia.org/wiki/Metric_map} for inspiration.}
+% Similar to \cite{Denardo1967}
 
 \begin{theorem}
-  \label{thm:arbitrary-dual}
-  If a heuristic aggregation function $\Phi$ is not the constant 0, then there exists a \kgs and a tuple of arbitrary heuristics such that \kastarphi is not $k$-admissible.
+  \label{thm:consistent}
+  Let $\Phi$ be a \axiomcons heuristic aggregation function.
+  For any \kgs and for any tuple of consistent heuristics $\vect{h}$, \kastarphi is $k$-admissible.
 \end{theorem}
 \begin{proof}
-  $\Phi$ is not the constant function 0, so there exists a vector $\vect{v}$, such that $\Phi(\vect{v}) > 0$,
-  Let $\vect{w} = \vect{0}$, $i = 1$, and $\delta$ such that $\Phi(\vect{v}) > \delta > 0$.
-  Note that $w_i = 0$ and that $\Phi(\vect{v}) > \Phi(\vect{w}) + \delta = \delta$ and consider the counter-example in Figure~\ref{fig:kstarphi-bad}. [[AF: not clear what are the different variables? nodes? just variables? Also, I think the text in the caption should be placed in the main text]][[AF: I suggest to move all the vector from bold to a letter with a bar above or bellow]]
+  Assume that \kastar chooses to expand a goal $t_i \in \{t_1, \ldots t_k\}$) via a path $p$. 
+  Applying Lemma~\ref{lem:simple} to $t_i$, we obtain there exists $n\in \open$ such that $g(n) + d(n, t_i) = d(s, t_i)$.
+  Since $t_i$ is expanded before $n$, we have 
+  \begin{equation}
+      g(t_i) + \Phi(\vect{h}(t_i)) = F(t_i) \leq F(n) = g(n) + \Phi(\vect{h}(n))
+  \end{equation}
+    Since all heuristics are consistent, we have that for every $j$
+  \begin{align}
+    h_j(n)                  & \leq d(n, t_i) + h_j(t_i)   \\
+    h_j(n) - h_j(t_i)       & \leq d(n, t_i)               
+%    \Phi(\vect{h}(n)) - \Phi(\vect{h}(t_i)) & \leq d(n, t_i) & \text{($\Phi$ is \axiomcons and $h_i(t_i) = 0$)}\\
+\end{align}
+Since this holds for every $j$, we have: 
+\begin{align}
+    \max (\vect{h}(n) - \vect{h}(t_i)) & \leq d(n, t_i)              & \text{}\\
+    \Phi(\vect{h}(n))-\Phi(\vect{h}(t_i))  & \leq d(n, t_i)  & \text{($\Phi$ is \axiomcons and $h_i(t_i) = 0$)}\\
+        \Phi(\vect{h}(n))  & \leq d(n, t_i) + \Phi(\vect{h}(t_i)) & \\
+    g(n) + \Phi(\vect{h}(n))           & \leq g(n)+ d(n, t_i) + \Phi(\vect{h}(t_i)) & \\
+    F(n)           & \leq d(s, t_i) + \Phi(\vect{h}(t_i)) &
+    \text{($n$ is chosen via Lemma~\ref{lem:simple})}
+  \end{align}  
+    Now, since $t$ is expanded before $n$, we have that $F(t_i) \leq F(n)$. 
+  \begin{align}  
+    F(t_i) \leq F(n)                     & \leq d(s, t_i) + \Phi(\vect{h}(t_i)) & \text{($t_i$ is expanded before $n$)}\\
+    g(t_i) + \Phi(\vect{h}(t_i))           & \leq d(s, t_i) + \Phi(\vect{h}(t_i)) & \text{(by definition of $F$)}\\
+    g(t_i)                & \leq d(s, t_i) & 
+    \label{eq:consistent}
+  \end{align}
+  By definition of $d$, we know that $d(s,t_i)\leq g(t_i)$. Therefore, when we expand a goal its $g$ value is equal to $d(s, t_i)$ as required.
+\end{proof}
+
+Theorem~\ref{thm:consistent} shows that being \axiomcons is a sufficient condition for optimality of \kastarphi with consistent heuristics.
+Our next result shows that it is a necessary condition. 
 \begin{figure}
   \centering
   \subfloat{
@@ -184,152 +108,53 @@ On the other hand, we can show that UCS is the only \kastar instantiation that i
 
     \node[left  = 2mm of  s,infobox] {$\vect{h}=\vect{0}$};
     \node[right = 2mm of  a,infobox] {$\vect{h}=\vect{v}$};
-    \node[right = 2mm of  b,infobox] {$\vect{h}=\vect{w}$};
+    \node[right = 2mm of  b,infobox] {$\vect{h}=\vect{u}$};
     \node[left  = 2mm of  c,infobox] {$\vect{h}=\vect{0}$};
   \end{tikzpicture}
   } \hfill
   \subfloat{
     \begin{tabular}[b]{lccc}
       \toprule
-      Path & $g$ & $H$ & $F$\\
+      Path & $g$ & $\Phi(\vect{h})$ & $F$\\
       \midrule
-      $SB$ & $\delta + 2\epsilon$ & $\Phi(\vect{w})$ & $\Phi(\vect{v}) - \epsilon$ \\
+      $SB$ & $\delta + 2\epsilon$ & $\Phi(\vect{u})$ & $\Phi(\vect{v}) - \epsilon$ \\
       $SC$ & $\Phi(\vect{v})$ & $0$ & $\Phi(\vect{v})$\\
       $SA$ & $\epsilon$ & $\Phi(\vect{v})$ & $\Phi(\vect{v}) + \epsilon$ \\
-      $SAB$ & $\delta + \epsilon$ & $\Phi(\vect{w})$ & $\Phi(\vect{v}) - 2\epsilon$ \\
+      $SAB$ & $\delta + \epsilon$ & $\Phi(\vect{u})$ & $\Phi(\vect{v}) - 2\epsilon$ \\
       \bottomrule
     \end{tabular}
   }
-  \caption{Generic counter-example for \kastarphi.
-    Let $\vect{v}$, $\vect{w}$, $i$, and $\delta$ such that $w_i = 0$, $\delta > 0$, and $\Phi(\vect{v}) > \Phi(\vect{w}) + \delta$.
-    Define $\epsilon = \frac{\Phi(v) - \Phi(\vect{w}) - \delta}{3} > 0$.
-    We use the weighted graph displayed above left where $S$ is the start state, $B$ is the $i$\textsuperscript{th} goal and $C$ is the $j$\textsuperscript{th} goal for $j \neq i$.
-     As can be seen from the table above right, the search expands $S$, $B$, $C$, then stops.
-     The optimal path to $B$ is $SAB$, but \kastarphi returns the suboptimal path $SB$.}
+  \caption[Generic counter-example for \kastarphi]{Generic counter-example for \kastarphi. 
+  The start is $S$, $B$ is the $i$\textsuperscript{th} goal, and $C$ is the $j$\textsuperscript{th} goal for $j \neq i$. 
+  For any, $\vect{v}$, $\vect{u}$, $i$, $\delta$, and $\epsilon$ such that (1) $u_i = 0$, (2) $\delta > 0$, (3) $\Phi(\vect{v}) > \Phi(\vect{u}) + \delta$, and (4) $\epsilon = \frac{\Phi(v) - \Phi(\vect{u}) - \delta}{3} > 0$, running \kastarphi will return a suboptimal path to $B$. 
+  
+  To see this, the table on the right shows the $g$, $\Phi(\vect{h})$, and $F$ values for the possible paths to the graph nodes.
+  The search expands $S$, $B$, $C$, then stops.
+  The optimal path to $B$ is $SAB$, but \kastarphi returns the suboptimal path $SB$.}
   \label{fig:kstarphi-bad}
 \end{figure}
-\end{proof}
-
-
-\subsection{Admissible Heuristics}
-\begin{definition}
-  A heuristic aggregation function $\Phi$ is \emph{\axiomadm} iff for every vector $\vect{v}$, we have $\Phi(\vect{v}) \leq \min \vect{v}$.
-\end{definition}
-[[AF: adm-compat???]]
-\begin{observation}
-  $\Phi = 0$ and $\Phi=\min$ are \axiomadm.
-\end{observation}
-
-\begin{theorem}
-  \label{thm:admissible}
-  Let $\Phi$ be a \axiomadm heuristic aggregation function.
-  For any \kgs and for any tuple of admissible heuristics $\vect{h}$, \kastarphi is $k$-admissible.
-\end{theorem}
-\begin{proof}
-  Assume that \kastarphi chooses to expand a goal node $t$ (i.e., $t=t_i\in\{t_1,\ldots t_k\}$).
-  Applying Lemma~\ref{lem:simple} to $t_i$, we obtain $n\in \open$ such that $g(n) + d(n, t_i) = d(s, t_i)$.
-  Since $t$ is expanded before $n$, we have $g(t) + \Phi(\vect{h}(t)) = F(t) \leq F(n) = g(n) + \Phi(\vect{h}(n))$.
-
-  \begin{align}
-    h_i(n) & \leq d(n,t_i) & \text{($h_i$ is admissible)}\\
-    \Phi(\vect{h}(n)) \leq \min_j h_j(n) & \leq d(n,t_i) & \text{($\Phi$ is \axiomadm)}\\
-    g(n) + \Phi(\vect{h}(n)) & \leq g(n) + d(n, t_i) = d(s, t_i) & \text{($n$ is chosen via Lemma~\ref{lem:simple})}\\
-    F(t) \leq F(n) & \leq d(s, t_i) & \text{($t$ is expanded before $n$)}\\
-    g(t) + \Phi(\vect{h}(t)) & \leq d(s, t_i) & \text{(by definition of $F$)}\\
-    g(t) & \leq d(s, t_i) & \text{($\Phi$ is non-negative)}\\
-    d(s, t_i) \leq g(t) & \leq d(s, t_i) & \text{(by definition of $d$)}
-%    \label{eq:admissible}
-  \end{align}
-  Therefore, when we expand a goal its $g$ value is equal to $d(s,t_i)$ as required.
-\end{proof}
-
-Theorem~\ref{thm:admissible} shows that being \axiomadm is a sufficient condition for optimality of \kastarphi with admissible heuristics.
-Our next result shows that it is a necessary condition.
-
-\begin{theorem}
-  \label{thm:admissible-dual}
-  If a heuristic aggregation function $\Phi$ is not \axiomadm, then there exists a \kgs and a tuple of admissible heuristics such that \kastarphi is not $k$-admissible.
-\end{theorem}
-\begin{proof}
-  Let $\vect{v}$ such that $\Phi(\vect{v}) > \min \vect{v}$.
-  Let $\vect{w} = \vect{0}$, $i = \argmin \vect{v}$, and $\delta$ such that $\Phi(\vect{v}) > \delta > \min \vect{v} = v_i$.
-  Note that $\Phi(\vect{v}) > \Phi(\vect{w}) + \delta$ and consider the counter-example in Figure~\ref{fig:kstarphi-bad}.
-
-  To conclude the proof, it remains to observe that the heuristics involved are admissible.
-  This is indeed the case because we have $h_i(A) \leq \min \vect{v} \leq \delta = d(A, B)$ and therefore $h_i(A) \leq d(A, B)$.
-\end{proof}
-
-[[AF: doesn't this mean that MIN is the only reasonable function that is k-admissible? Anything smaller than min is not reasonable in my option. It is like cutting a heuristic down]
-
-\begin{theorem}
-  \label{the:kastarmin-surely}
-  For any \kgs and for any tuple of admissible heuristics $\vect{h}$, \kastarmin expands all the surely expanded states.
-\end{theorem}
-\begin{proof}
-%  Consider the \open and \closed lists when the last goal is expanded.
-  By negation, let $n$ be a state that is surely expanded w.r.t. $t_i$ but is not expanded by \kastarmin.
-  That is, $n$ is reachable from $s$ by a path of states with $f_i$  values lower than $d(s, t_i)$ and $f_i(n) < d(s, t_i)$.
-  Since we are using $\Phi = \min$, the $F$ values of the states along this path must also be lower than $d(s, t_i)$.
-  As all edges in the underlying graph have non-negative cost, $h_i(t_i) = 0$ and therefore $F(t_i) = d(s, t_i)$.
-  Hence, the minimal $F$ value in \open is $d(s, t_i)$ when $t_i$ is expanded.
-  Thus, all the states along the path to $n$ and $n$ itself must have already been expanded, as all of them have $f_i$ values smaller than $d(s, t_i)$ and thus also have $F$ values smaller than $d(s, t_i) = F(t_i)$.
-\end{proof}
-\abda{Probably more than just \kastarmin.}
-
-
-[[AF: probably all the adm-compact functions??]
-
-\subsection{Consistent Heuristics}
-
-\begin{definition}
-  A heuristic aggregation function $\Phi$ is \emph{\axiomcons} iff for every vectors $\vect{v}$ and $\vect{w}$, we have $\exists i, w_i = 0 \implies \Phi(\vect{v}) - \Phi(\vect{w}) \leq \max (\vect{v}-\vect{w})$.
-\end{definition}
-
-[[AF: not clear what is $w_i$? ]
-%\abda{Alternative names: \emph{metric}, \emph{weak contraction}. See \url{https://en.wikipedia.org/wiki/Metric_map} for inspiration.}
-% Similar to \cite{Denardo1967}
-
-\begin{theorem}
-  \label{thm:consistent}
-  Let $\Phi$ be a \axiomcons heuristic aggregation function.
-  For any \kgs and for any tuple of consistent heuristics $\vect{h}$, \kastarphi is $k$-admissible.
-\end{theorem}
-\begin{proof}
-  Assume that \kastar chooses to expand a goal node $t$ (i.e., $t = t_i \in \{t_1, \ldots t_k\}$) via a path $p$.
-  Applying Lemma~\ref{lem:simple} to $t_i$, we obtain $n\in \open$ such that $g(n) + d(n, t_i) = d(s, t_i)$.
-  Since $t$ is expanded before $n$, we have $g(t) + \Phi(\vect{h}(t)) = F(t) \leq F(n) = g(n) + \Phi(\vect{h}(n))$.
-
-  \begin{align}
-    h_j(n)                             & \leq d(n, t_i) + h_j(t_i) & \text{(for all $j$, $h_j$ is consistent)}\\
-    h_j(n) - h_j(t_i)                  & \leq d(n, t_i)              & \text{(for all $j$)}\\
-    \max (\vect{h}(n) - \vect{h}(t_i)) & \leq d(n, t_i)              & \text{}\\
-%    \Phi(\vect{h}(n)) - \Phi(\vect{h}(t_i)) & \leq d(n, t_i) & \text{($\Phi$ is \axiomcons and $h_i(t_i) = 0$)}\\
-    \Phi(\vect{h}(n))                  & \leq d(n, t_i) + \Phi(\vect{h}(t_i)) & \text{($\Phi$ is \axiomcons and $h_i(t_i) = 0$)}\\
-    g(n) + \Phi(\vect{h}(n))           & \leq d(s, t_i) + \Phi(\vect{h}(t_i)) & \text{($n$ is chosen via Lemma~\ref{lem:simple})}\\
-    F(t) \leq F(n)                     & \leq d(s, t_i) + \Phi(\vect{h}(t_i)) & \text{($t$ is expanded before $n$)}\\
-    g(t) + \Phi(\vect{h}(t))           & \leq d(s, t_i) + \Phi(\vect{h}(t_i)) & \text{(by definition of $F$)}\\
-    d(s, t_i) \leq g(t)                & \leq d(s, t_i) & \text{(by definition of $d$)}
-    \label{eq:consistent}
-  \end{align}
-  Therefore, when we expand a goal its $g$ value is equal to $d(s, t_i)$ as required.
-\end{proof}
-
-Theorem~\ref{thm:consistent} shows that being \axiomcons is a sufficient condition for optimality of \kastarphi with consistent heuristics.
-Our next result shows that it is a necessary condition.
-
 \begin{theorem}
   \label{thm:consistent-dual}
   If a heuristic aggregation function $\Phi$ is not \axiomcons, then there exists a \kgs and a tuple of consistent heuristics such that \kastarphi is not $k$-admissible.
 \end{theorem}
 \begin{proof}
-  $\Phi$ is not \axiomcons, so there exists vectors $\vect{v}$, $\vect{w}$, and an index $i$ such that $w_i = 0$ and $\Phi(\vect{v}) - \Phi(\vect{w}) > \max (\vect{v} - \vect{w})$.
-  Let $\delta$ such that $\Phi(\vect{v}) - \Phi(\vect{w}) > \delta > \max (\vect{v} - \vect{w})$.
-  Recall that $v_i \geq 0$, so $\max (\vect{v} - \vect{w}) \geq v_i - w_i \geq 0$, therefore $\delta > 0$.
-  Consider the counter-example in Figure~\ref{fig:kstarphi-bad}.
+Since $\Phi$ is not \axiomcons, there exists vectors $\vect{v}$, $\vect{u}$, and an index $i$ such that $u_i = 0$ and $\Phi(\vect{v}) - \Phi(\vect{u}) > \max (\vect{v} - \vect{u})$. 
+  Let $\delta$ such that $\Phi(\vect{v}) - \Phi(\vect{u}) > \delta > \max (\vect{v} - \vect{u})$.
+Since the domain of $\Phi$ is vectors of non-negative values, $v_i \geq 0$ and so $\max (\vect{v} - \vect{u}) \geq v_i - u_i \geq 0$, therefore $\delta > 0$.
+
+
+  Define $\epsilon = \frac{\Phi(\vect{v}) - \Phi(\vect{u}) - \delta}{3} > 0$.
+  Using $\vect{v}$, $\vect{u}$, $i$, $\delta$, and $\epsilon$, we can construct a counter-example showing that \kastarphi is not $k$-admissible. 
+  This counter example is given in Figure~\ref{fig:kstarphi-bad}. 
+$S$ is the start, $B$ is the $i$\textsuperscript{th} goal and $C$ is the $j$\textsuperscript{th} goal for $j \neq i$. 
+     As can be seen from the table above right, the search expands $S$, $B$, $C$, then stops. 
+     The optimal path to $B$ is $SAB$, but \kastarphi returns the suboptimal path $SB$. 
 
   To conclude the proof, it remains to observe that the heuristics involved are consistent.
   This is indeed the case because for all $j$, we have $h_j(A) - h_j(B) = v_j - w_j \leq \max (\vect{v} - \vect{w}) < \delta = d(A, B)$ and therefore $h_j(A) \leq d(A, B) + h_j(B)$.
 \end{proof}
+
+[[UP TO HERE 19.10]]
 
 Theorem~\ref{thm:consistent} opens the opportunity to run \kastar for a larger range of heuristic aggregation functions than Theorem~\ref{thm:admissible}, provided the heuristic functions are consistent.
 
@@ -412,26 +237,26 @@ Thus, Theorem~\ref{thm:consistent} does indeed extend the range of functions for
 \end{theorem}
 \begin{proof}
   Let $n$ be a node expanded by \kastarmin.
-  Let $i$ be such that $h_i(n) = \min h_i(n)$.
+  Let $t_i$ be such that $h_{t_i}(n) = \min h_{t_i}(n)$.
   Applying Lemma~\ref{lem:simple} to $t_i$, we obtain $n_i \in \open$ such that $g(n_i) + d(n_i, t_i) = d(s, t_i)$.
   For any node $p$ on the path from $s$ to $n$, we have the following derivation.
   \begin{align}
-    h_i(p)        & \leq d(p, n) + h_i(n)         & \text{($h_i$ is consistent)}\\
-    h_i(p)        & \leq d(p, n) + \Phi(\vect{h}(n))         & \text{(from the choice of $i$)}\\
-    g(p) + h_i(p) & \leq g(p) + d(p, n) + \Phi(\vect{h}(n)) & \text{}\\
-    g(p) + h_i(p) & \leq g(n) + \Phi(\vect{h}(n))          & \text{Lemma blabla}\\
-    g(p) + h_i(p) & \leq F(n)         & \text{(by definition of $F$)}\\
-    g(p) + h_i(p) & \leq F(n_i) = g(n_i) + \Phi(\vect{h}(n_i))      & \text{($n$ is expanded)}\\
-    g(p) + h_i(p) & \leq g(n_i) + h_i(n_i) & \text{(by definition of $\Phi$)}\\
-    g(p) + h_i(p) & \leq g(n_i) + d(n_i, t_i) & \text{($h_i$ is admissible)}\\
-    g(p) + h_i(p) & \leq d(s, t_i) & \text{($n_i$ is chosen via Lemma~\ref{lem:simple})}
+    h_{t_i}(p)        & \leq d(p, n) + h_{t_i}(n)         & \text{($h_{t_i}$ is consistent)}\\
+    h_{t_i}(p)        & \leq d(p, n) + \Phi(\vect{h}(n))         & \text{(from the choice of $t_i$)}\\
+    g(p) + h_{t_i}(p) & \leq g(p) + d(p, n) + \Phi(\vect{h}(n)) & \text{}\\
+    g(p) + h_{t_i}(p) & \leq g(n) + \Phi(\vect{h}(n))          & \text{Lemma blabla}\\
+    g(p) + h_{t_i}(p) & \leq F(n)         & \text{(by definition of $F$)}\\
+    g(p) + h_{t_i}(p) & \leq F(n_i) = g(n_i) + \Phi(\vect{h}(n_i))      & \text{($n$ is expanded)}\\
+    g(p) + h_{t_i}(p) & \leq g(n_i) + h_i(n_i) & \text{(by definition of $\Phi$)}\\
+    g(p) + h_{t_i}(p) & \leq g(n_i) + d(n_i, t_i) & \text{($h_{t_i}$ is admissible)}\\
+    g(p) + h_{t_i}(p) & \leq d(s, t_i) & \text{($n_i$ is chosen via Lemma~\ref{lem:simple})}
     \label{eq:nosurplus}
   \end{align}
   Thus, $n$ is not surplus for the SPP $\Pi_i$.
   Therefore, $n$ is not surplus for the \kgs.
 \end{proof}
 
-Note that our assumption that $h_1, \ldots h_k$ are consistent is necessary for the proof of Theorem~\ref{the:kastarmin-surplus}.
+Note that our assumption that $h_{t_1}, \ldots h_{t_k}$ are consistent is necessary for the proof of Theorem~\ref{the:kastarmin-surplus}.
 With an admissible but inconsistent heuristic, \kastarmin may, in fact, expand surplus states.
 Figure~\ref{fig:inconsistent} shows a \kgs problem with $k = 2$ where this occurs.
 \kastarmin will expand all states in the figure, while $B$ is surplus for both goals.
@@ -466,9 +291,9 @@ Figure~\ref{fig:inconsistent} shows a \kgs problem with $k = 2$ where this occur
   \subfloat{
     \begin{tabular}[b]{l*8{c}}
       \toprule
-      \multirow{2}{*}{Path} &     & \multicolumn{2}{c}{\astari{1}} & \multicolumn{2}{c}{\astari{2}} & \multicolumn{3}{c}{\kastarmin} \\
+      \multirow{2}{*}{Path} &     & \multicolumn{2}{c}{\astari{t_1}} & \multicolumn{2}{c}{\astari{t_2}} & \multicolumn{3}{c}{\kastarmin} \\
       \cmidrule(r){3-4} \cmidrule(lr){5-6} \cmidrule(l){7-9}
-              & $g$ & $f$ & S  & $f$ & S  & $H$ & $F$ & S \\
+              & $g$ & $f$ & S  & $f$ & S  & $\Phi(\vect{h})$ & $F$ & S \\
       \midrule
       $S$    & $0$ & $0$ & \xmark & $0$ & \cmark & $0$ & $0$ & \xmark \\
       $St_1$ & $3$ & $3$ & \xmark & $8$ & \cmark & $0$ & $3$ & \xmark \\
@@ -479,18 +304,153 @@ Figure~\ref{fig:inconsistent} shows a \kgs problem with $k = 2$ where this occur
     \end{tabular}
   }
   \caption{An example where \kastarmin expands a surplus state, $B$.
-    The table on the right indicates which nodes are expanded and whether the corresponding state is surplus (S) for \astari{1}, \astari{2}, and \kastarmin.
-    This example relies on the inconsistency of the second heuristic: $h_2(A) >  d(A, B) + h_2(B)$.
+    The table on the right indicates which nodes are expanded and whether the corresponding state is surplus ($S$) for \astari{t_1}, \astari{t_2}, and \kastarmin.
+    This example relies on the inconsistency of the second heuristic: $h_{t_2}(A) >  d(A, B) + h_{t_2}(B)$.
   }
   \label{fig:inconsistent}
 \end{figure}
 
 An equivalent theorem for \kastarmax does not hold.
 Indeed, there are cases where \kastarmax expands surplus states.
-For example, consider the \kgs problem in Figure~\ref{fig:need-resort}.
-State $A$ will be expanded first, having $F_{max}(A) = 7$, followed by $B$ ($F_{max}(B) = 8$), $t_2$ ($F_{max}(t_2) = 12$), and finally $t_1$ ($F_{max}(t_1) = 15$).
+For example, consider the \kgs problem in Figure~\ref{fig:lazy}.
+State $A$ will be expanded first, having $F_{\max}(A) = 4$, followed by $t_2$ ($F_{\max}(t_2) = 10$)), and finally $t_1$ ($F_{\max}(t_1) = 11$).
 However, neither \astari{1} nor \astari{2} will expand $A$.
-Moreover, $A$ is surplus w.r.t. both $\Pi_1$ and $\Pi_2$, since the optimal path to $t_1$ and $t_2$ costs 6 and 3, respectively, while $f_1(A) = 7 > 6$ and $f_2(A) = 5 > 3$.
+Moreover, $A$ is surplus w.r.t. both $\Pi_1$ and $\Pi_2$, since the optimal path to $t_1$ and $t_2$ costs 3 and 1, respectively, while $f_1(A) = 4 > 3$ and $f_2(A) = 2 > 1$.
 
 
-%* NTheorem 2 (subsumes Theorem 2/Corollary 2): If A satisfies NAxiom 2 and if h are consistent, then kA*_A is optimal for all k goals. Proof sketch: see below
+
+==========================================
+
+
+
+
+
+
+\subsection{General Heuristic Aggregation Functions}
+The operators $\min$ and $\max$ are two ways to aggregate the heuristic values of a given node, but \kastar can also be implemented with other aggregation functions, functions that accept a vector of $k$ values and output a single value.
+\begin{definition}
+  Let $k$ be a fixed positive integer.
+  A \emph{heuristic aggregation function} is a function $\Phi: \nonnegreals^k \rightarrow \nonnegreals$ such that $\Phi(\vect{0}) = 0$, where $\vect{0}$ is the $k$-dimensional zero vector.
+\end{definition}
+\kastar can use such a function to computes the $F$ value of a node $n$, as $F(n) = g(n) + \Phi(\vect{h}(n))$, where $\vect{h}(n)$ is the vector $\tuple{h_1(n), h_2(n), \dots, h_k(n)}$.
+We denote the resulting algorithm as \kastarphi.
+%Such a heuristic aggregation function accepts a vector of $k$ heuristic values of a node  and outputs a single value, which is then used by \kastar to compute node's $F$ value.  Formally,
+
+In the rest of this section, we examine under which assumptions on $\Phi$ and on the heuristics $\vect{h}$ we can obtain optimality guarantees on \kastarphi.
+As we shall see, there is a tradeoff between the two types of assumptions.
+Making stronger assumptions on the heuristics leads to optimality for a larger range of aggregation functions. [[AF: not sure what the sentence means: it means optimallity]][[AS: Better now?]
+
+
+
+\subsection{Admissible Heuristics}
+\begin{definition}
+  A heuristic aggregation function $\Phi$ is \emph{\axiomadm} iff for every vector $\vect{v}$, we have $\Phi(\vect{v}) \leq \min \vect{v}$.
+\end{definition}
+[[AF: adm-compat???]]
+\begin{observation}
+  $\Phi = 0$ and $\Phi=\min$ are \axiomadm.
+\end{observation}
+
+\begin{theorem}
+  \label{thm:admissible}
+  Let $\Phi$ be a \axiomadm heuristic aggregation function.
+  For any \kgs and for any tuple of admissible heuristics $\vect{h}$, \kastarphi is $k$-admissible.
+\end{theorem}
+\begin{proof}
+  Assume that \kastarphi chooses to expand a goal $t_i\in\{t_1,\ldots t_k\}$.
+  Applying Lemma~\ref{lem:simple} to $t_i$, we obtain $n\in \open$ such that $g(n) + d(n, t_i) = d(s, t_i)$.
+  Since $t_i$ is expanded before $n$, we have $g(t_i) + \Phi(\vect{h}(t_i)) = F(t_i) \leq F(n) = g(n) + \Phi(\vect{h}(n))$.
+
+  \begin{align}
+    h_{t_i}(n) & \leq d(n,t_i) & \text{($h_{t_i}$ is admissible)}\\
+    \Phi(\vect{h}(n)) \leq \min_{t_j} h_{t_j}(n) & \leq d(n, t_i) & \text{($\Phi$ is \axiomadm)}\\
+    g(n) + \Phi(\vect{h}(n)) & \leq g(n) + d(n, t_i) = d(s, t_i) & \text{($n$ is chosen via Lemma~\ref{lem:simple})}\\
+    F(t_i) \leq F(n) & \leq d(s, t_i) & \text{($t_i$ is expanded before $n$)}\\
+    g(t_i) + \Phi(\vect{h}(t_i)) & \leq d(s, t_i) & \text{(by definition of $F$)}\\
+    g(t_i) & \leq d(s, t_i) & \text{($\Phi$ is non-negative)}\\
+    d(s, t_i) \leq g(t_i) & \leq d(s, t_i) & \text{(by definition of $d$)}
+%    \label{eq:admissible}
+  \end{align}
+  Therefore, when we expand a goal its $g$ value is equal to $d(s,t_i)$ as required.
+\end{proof}
+
+Theorem~\ref{thm:admissible} shows that being \axiomadm is a sufficient condition for optimality of \kastarphi with admissible heuristics.
+Our next result shows that it is a necessary condition.
+
+\begin{theorem}
+  \label{thm:admissible-dual}
+  If a heuristic aggregation function $\Phi$ is not \axiomadm, then there exists a \kgs and a tuple of admissible heuristics such that \kastarphi is not $k$-admissible.
+\end{theorem}
+\begin{proof}
+  Let $\vect{v}$ such that $\Phi(\vect{v}) > \min \vect{v}$.
+  Let $\vect{w} = \vect{0}$, $i = \argmin \vect{v}$, and $\delta$ such that $\Phi(\vect{v}) > \delta > \min \vect{v} = v_i$.
+  Note that $\Phi(\vect{v}) > \Phi(\vect{w}) + \delta$ and consider the counter-example in Figure~\ref{fig:kstarphi-bad}.
+
+  To conclude the proof, it remains to observe that the heuristics involved are admissible.
+  This is indeed the case because we have $h_{t_i}(A) \leq \min \vect{v} \leq \delta = d(A, B)$ and therefore $h_{t_i}(A) \leq d(A, B)$.
+\end{proof}
+
+[[AF: doesn't this mean that MIN is the only reasonable function that is k-admissible? Anything smaller than min is not reasonable in my option. It is like cutting a heuristic down]
+
+\begin{theorem}
+  \label{the:kastarmin-surely}
+  Let $\Phi$ be a \axiomadm heuristic aggregation function. For any \kgs and for any tuple of admissible heuristics $\vect{h}$, \kastarphi expands all the surely expanded nodes.
+\end{theorem}
+\begin{proof}
+%  Consider the \open and \closed lists when the last goal is expanded.
+  Let $n$ be a node that is surely expanded w.r.t. some goal $t_i$.
+  That is, $n$ is reachable from $s$ by a path of nodes with $f_i$ values lower than $d(s, t_i)$ and $f_i(n) < d(s, t_i)$.
+  $\Phi$ is \axiomadm so for any node $m$ along this path we have $\Phi(m) \leq \min_{t_j} h_{t_j}(m) \leq h_{t_i}(m)$.
+  Thus, the $F$ values of the nodes along this path must also be lower than $d(s, t_i)$.
+  As all edges in the underlying graph have non-negative cost, $h_{t_i}(t_i) = 0$ and therefore $F(t_i) = d(s, t_i)$.
+  Hence, the minimal $F$ value in \open is $d(s, t_i)$ when $t_i$ is expanded.
+  Thus, all the nodes along the path to $n$ and $n$ itself must have already been expanded, as all of them have $F$ values smaller than $d(s, t_i) = F(t_i)$.
+\end{proof}
+
+
+\subsection{Arbitrary Heuristics}
+%\abda{$\Phi$ needs to be constant $0$.}
+
+\begin{definition}
+  \label{def:ucs}
+  \ac{kUCS} is the \kastarvar{0} algorithm where the heuristic aggregation function is the constant 0 function which maps any vector to value 0.
+\end{definition}
+\ac{kUCS} runs a best-first search without a heuristic, prioritizing nodes based on their $g$ values alone, basically running Dijkstra's algorithm~\cite{DIJ59,Felner2011}, until all goals are expanded.  %As a result, UCS finds the optimal path to every reachable state, including every reachable goal---it is $k$-admissible.
+
+\begin{theorem}
+  \label{thm:arbitrary}
+  For any \kgs instance and for any tuple of heuristics, \ac{kUCS} is $k$-admissible.
+\end{theorem}
+
+\ac{kUCS} does not use any heuristic information and is guaranteed to find the optimal path for each goal. However, without imposing any restriction on the heuristic functions, \ac{kUCS} is the only \kastar instantiation that is $k$-admissible with arbitrary heuristics. 
+For example, let $k=1$ and assume that the heuristic functions is inadmissible. Clearly, \kastar will return a suboptimal solution. We 
+
+\begin{theorem}
+  \label{thm:arbitrary-dual}
+  If a heuristic aggregation function $\Phi$ is not the constant 0, then there exists a \kgs instance and a tuple of arbitrary heuristics such that \kastarphi is not $k$-admissible.
+\end{theorem}
+\begin{proof}
+  $\Phi$ is not the constant function 0, so there exists a vector $\vect{v}$, such that $\Phi(\vect{v}) > 0$,
+  Let $\vect{w} = \vect{0}$, $i = 1$, and $\delta$ such that $\Phi(\vect{v}) > \delta > 0$.
+  Note that $w_i = 0$ and that $\Phi(\vect{v}) > \Phi(\vect{w}) + \delta = \delta$ and consider the counter-example in Figure~\ref{fig:kstarphi-bad}. [[AF: not clear what are the different variables? nodes? just variables? Also, I think the text in the caption should be placed in the main text]][[AF: I suggest to move all the vector from bold to a letter with a bar above or bellow]]
+\end{proof}
+
+
+
+
+
+%In \astar{} for a single goal, states are prioritized in \open according to the $f=g+h$ value of a state. In contrast, a state in \kastar{} has a vector of $k$ heuristic values $\vect{h}(n)$ and consequently a vector of $f$ values $\vect{f}$(n) that contains one $f$ value per goal. Therefore, \kastar{} requires a state evaluation function that aggregates these $f$ values in some way. In Algorithm~\ref{alg:k-goal-bfs} this is encapsulated in the {\tt ComputeF} function. We refer to the value ($F$) returned by this function as the state's $F$ value, and consider the following two options for computing it.
+We consider the following two options for computing the $F$ value of a state:  
+\begin{align}
+  \text{\minf} =& g(n) + \min_{i\in [1,k]}h_i(n) \\
+  \text{\maxf} =& g(n) + \max_{i\in [1,k]}h_i(n)
+\end{align}
+\kastar that uses \minf as the state evaluation function is referred to hereinafter as \kastarmin, and similarly \kastar that uses \maxf is referred to as \kastarmax. [[AF: If this was not already defined earlier then put this earlier. No need to re-define]]
+
+
+
+
+
+%[[AF: I do not like the term maxf and do not like that you say that it is admissible without exactly defining what you mean. Can you omit this and only talk on kastarmax]]\roni{Fixed}. [[ARIEL UP TO HERE]]
+
+[[AF: maybe we just talk on the general case first and then mention that max and min are special cases?]]
