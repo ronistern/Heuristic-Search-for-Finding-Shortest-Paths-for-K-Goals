@@ -500,12 +500,12 @@ More generally, this potential inefficiency of \kxastar stems from the fact that
 %\section{A Single Search for all  $k$ Goals}
 \label{sec:one-k-goal-search}
 
-Before presenting a complete pseudo code for \kastar, we highlight several aspects that differentiate it from \kxastar.
+Before presenting a complete pseudo code for \kastar, we highlight several aspects that differentiate it from \kxastar and from \astar.
+
 
 %needs to ... per node As a consequence of sharing \open and \closed, \kastar needs to ... per node. This value is based on the distance to start as well as all available heuristic information. 
 
-\subsection{Maintaining the Set of Active Goals}
-
+\paragraph{Maintaining the Set of Active Goals.}
 When a goal is expanded in \astar, the search halts.
 By contrast, in \kastar the search does not halt until a lowest-cost path to each of the $k$ goals has been found.
 To this end, \kastar tracks the set of goals that have not been expanded yet. 
@@ -513,58 +513,47 @@ We call $\activeg$ this set of \emph{active goals}.
 %[[AF: use this term above when saying that a search notifies later search that their goal was found]].
 
 %\subsection{Taking Advantage of the Heuristics}
-\subsection{Guiding the Search with Multiple Heuristics}
-
+\paragraph{Guiding the Search with Multiple Heuristics.}
 %Say that a node $n$ is expanded by each of the $k$ \astar searches performed by \kxastar. Every search may assign a different heursitic value for $n$, since for every search the heuristic estimates the distance from $n$ to a different goal. That is, 
 In \kxastar we implicitly assumed that for each goal $t_i$ there is a corresponding heuristic function $h_{t_i}$, so that $h_{t_i}(n)$ is the heuristic estimate of the cost to get from node $n$ to goal $t_i$. 
-
-
-In \kastar, there is a single search, but we still have access to these $k$ heuristic functions. Formally, every generated node $n$ is associated with a $k$-ary vector $\vect{h}(n) = \tuple{h_{t_1}(n), \ldots h_{t_k}(n)}$. In \kastar, nodes ready to be expanded are prioritized based on their $g$ value, their $\vect{h}$ values, and the set of the active goals ($\activeg$). 
-
-In more details, in every iteration \kastar selects from \open a node with the smallest $F$ value, which is computed by $F(n) = g(n) + \Phi_{\activeg}(\vect{h}(n))$, 
+In \kastar, there is a single search, but we still have access to these $k$ heuristic functions. Formally, every generated node $n$ is associated with a $k$-ary vector $\vect{h}(n) = \tuple{h_{t_1}(n), \ldots h_{t_k}(n)}$. \kastar chooses which node to expand in every iteration by considering the set of the active goals ($\activeg$),  
+the $g$ and $\vect{h}$ values of every node in \open, 
+and a \emph{heuristic aggregation function}. 
+\begin{definition}[Heuristic Aggregation Function]
+	Let $k$ be a fixed positive integer.
+	A \emph{heuristic aggregation function} is a function $\Phi: \nonnegreals^k \rightarrow \nonnegreals$ such that $\Phi(\vect{0}) = 0$, where $\vect{0}$ is the $k$-dimensional zero vector.
+	\label{def:aggregation}
+\end{definition}
+In more details, \kastar computes for every generated node the following value: $F_\Phi(n) = g(n) + \Phi_{\activeg}(\vect{h}(n))$, 
 where $\Phi$ is a given aggregation function. 
-The subscript $\activeg$ in $\Phi_\activeg$ denotes that the heuristic values for non-active goals (i.e., not in $\activeg$) are not aggregated.
-This avoids  unnecessary computations when a node is generated. %, computing heuristics only for the active goals suffices to determine its $F$ value.
- 
-We discuss in Section~\ref{sec:aggregating} various design choices of  the heuristic aggregation $\Phi$, how they impact \kastar's behavior with respect to the properties of the given heuristic functions. % Nicer phrasing?
-For now, assume the following natural instantiation of $\Phi$: 
+\kastar expands in every iteration a node with the smallest $F_\Phi$ value in \open. We denote by \kastarphi the instantiation of \kastar that uses a given aggregation function $\Phi$. 
+
+
+We discuss in Section~\ref{sec:aggregating} various design choices for  the heuristic aggregation function $\Phi$, and how they impact \kastar's behavior with respect to the properties of the given heuristic functions. 
+% Nicer phrasing?
+For now, assume the following natural heuristic aggregation function: 
 \begin{equation}
 \Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \min_{t_i\in\activeg} h_{t_i}(n) 
 \label{eq:basic-phi-min}
-\end{equation}
-%and \[ \Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \max_{t_i\in\activeg} h_{t_i}(n) \]
-%Meanwhile one can take $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \min_{t_i\in\activeg} h_{t_i}(n)$ or $\Phi_{\activeg}(\tuple{h_{t_1}(n), \dots h_{t_k}(n)}) = \max_{t_i\in\activeg} h_{t_i}(n)$ as reasonable instantiations. 
-
-
-
-%Thus, the computational effort of generating a node in \kastar is larger than in regular \astar, as it requires computing $k$ heuristic values. 
-
-%\footnote{As discussed later in the paper, the actual computational cost in \kastar can be smaller, since as the search progresses the list of relevant goals becomes smaller, and consequently computing $F$ becomes easier.}
-
-%defining $\Phi[AG]$ as an aggregation function that only aggregates over the values that correspond to the set of goalsset $AG$ can accept vectors of different sizes, specifically any size between 1 and $k$, and only  Common aggregation functions such as $\max$, $\min$, and average are all such functions, as we can apply them to vectors of different sizes. 
-%5[[TODO: New subsection to read]] Next, we ask the question of which heuristic aggregation functions can use Lazy \kastar and obtain  an admissible results (i.e., optimal paths to all goals). [[AF: I would summarize that eager and eager+ are always good. Lazy is OK for min but not for max. And now, we want to know what further with other functions]] To this end, we somewhat abuse [[AF: is this the correct word? You now use it on any size of vector up to k. Maybe you are widening it? Generalizing?]] the previous notation by defining $\Phi$ as an aggregation function that can accept vectors of different sizes,  specifically any size between 1 and $k$. % Common aggregation functions such as $\max$, $\min$, and average are all such functions, as we can apply them to vectors of different sizes. 
-
-
-
-
-%\subsubsection*{Node evaluation function.} When searching for a single lowest-cost path with \astar, the state are popped from \open according to their $f=g+h$ values. In \kastar, we compute the $h$-value forand associate every state in \open with a value that considers the $h$-value for each of the $k$ goals.     Thus, when a state is generated then we compute the heuristic for each of the $k$ goals.
-
+\end{equation} 
+The subscript $\activeg$ in $\Phi_\activeg$ denotes that the heuristic values for non-active goals (i.e., not in $\activeg$) are not aggregated. This avoids  unnecessary computations when a node is generated. 
+ 
 
 \begin{algorithm2e}
   \DontPrintSemicolon
   \KwIn{start $s$, goals $t_1, \ldots, t_k$}
   $g(s)\gets 0$; \open~$\gets \emptyset$; \closed~$\gets \emptyset$; \textsc{Solution}~$\gets \emptyset$\;
   \newcode{$\activeg$ $\gets \{t_1, \ldots, t_k\}$ \nllabel{line:init-active-goals}}\;
-  \newcode{Add $s$ to \open with key $F(s) = g(s) + \Phi_{\activeg}(\vect{h}(s))$ \nllabel{line:computeF-start}}\;
+  \newcode{Add $s$ to \open with key $F_\Phi(s) = g(s) + \Phi_{\activeg}(\vect{h}(s))$ \nllabel{line:computeF-start}}\;
   \While {\open $\neq \emptyset$} {
-    $\mathit{best} \gets$ a node in \open with the smallest key \nllabel{kastar:line:open:chooseNode}\;
+    $\mathit{best} \gets$ a node in \open with the smallest $F_\Phi$ \nllabel{kastar:line:open:chooseNode}\;
     Move $\mathit{best}$ from \open to \closed\;
     \newcode{
     \If {$\mathit{best}\in \activeg$}{
       \newcode{Add the path to $\mathit{best}$ to \textsc{Solution} \nllabel{line:storePath}}\;
       \newcode{Remove $\mathit{best}$ from $\activeg$ \nllabel{line:removeGoal}}\;
       \newcode{\For{every node $m$ in \open}{
-        Update the key of $m$ to $F(m) = g(m) + \Phi_{\activeg}(\vect{h}(m))$ \nllabel{kastar:line:eager-update}
+        Update the key of $m$ to $F_\Phi(m) = g(m) + \Phi_{\activeg}(\vect{h}(m))$ \nllabel{kastar:line:eager-update}
       }}
       \newcode{\lIf{$\activeg = \emptyset$}{
         \Return \textsc{Solution} \nllabel{kastar:line:allGoalsFound}}
@@ -593,28 +582,27 @@ For now, assume the following natural instantiation of $\Phi$:
 
 Algorithm~\ref{alg:kastar} shows the pseudocode for \kastar. 
 %We highlight the differences between the pseudo code of \astar (Algorithm~\ref{alg:astar}) and the pseudo code of \kastar (Algorithm~\ref{alg:kastar}) by marking every line that was changed or modified with a prefix ``[+]'' and the color blue. %[[AF: so many lines were changed so maybe just give the entire pseudo code. Everyone sees that it has a best-first search behavior]] 
-Initially, all goals are inserted into the set of active goals, denoted  $\activeg$ (line~\ref{line:init-active-goals}).
-Every node $n$ that is added to \open is associated with a $g$ value and a $F$ value.
-Just like in \astar, the $g$ value of a node $n$ is the cost of a lowest-cost path found so far from the start $s$ to $n$.
-The $F$ value is computed as $F(n) = g(n) + \Phi_{\activeg}(\vect{h}(n))$ as discussed above. 
-The set of active goals $\activeg$ is needed to allow aggregating only the heuristics to these goals when computing the $F$ value, bypassing the need to compute the heuristics for the other goals. 
- 
-In every iteration, the node with the smallest $F$ value is selected and removed from \open (line~\ref{line:open:chooseNode}).
-If it is a goal then we store the path to it (line~\ref{line:storePath}) and remove that goal from the active goal set $\activeg$ (line~\ref{line:removeGoal}).
-Removing this goal from $\activeg$ marks that we are no longer looking for a path to that goal.
-When this happens, we need to update the ordering of the nodes on \open (line~\ref{kastar:line:eager-update}).
-When the $\activeg$ list is empty, we halt the search, having found a path to each goal.
+Initially, all goals are inserted into the set of active goals, denoted  $\activeg$ (line~\ref{line:init-active-goals}), and $s$ is inserted to \open with its $F_\Phi$ value. 
+%Every node $n$ that is added to \open is associated with a $g$ value and a $F_\Phi$ value.
+%Just like in \astar, the $g$ value of a node $n$ is the cost of a lowest-cost path found so far from the start $s$ to $n$.5
+%The $F_\Phi$ value is computed as $g(n) + \Phi_{\activeg}(\vect{h}(n))$ as discussed above. The set of active goals $\activeg$ is needed to allow aggregating only the heuristics to these goals when computing the $F$ value, bypassing the need to compute the heuristics for the other goals. [[Roni: repetition]]
+In every iteration, a node with the smallest $F_\Phi$ value, denoted $\mathit{best}$, is selected and removed from \open (line~\ref{line:open:chooseNode}).
+If $\mathit{best}$ is an active goal, we store the path to it (line~\ref{line:storePath}) and remove that goal from the active goal set $\activeg$ (line~\ref{line:removeGoal}). 
+%Removing this goal from $\activeg$ marks that we are no longer looking for a path to that goal.
+When this happens, \kastar update the $F_\Phi$ value of all the nodes in \open, reordering the nodes according to their updated $F_\Phi$ value 
+ (line~\ref{kastar:line:eager-update}).
+When the $\activeg$ list is empty, we halt the search, having found a path to each goal (line~\ref{kastar:line:return-success}).
 
 
 % Completeness
 \kastar returns \emph{no solution exists} only if \open is empty (line~\ref{kastar:line:noSolution}).
-A node is removed from \open only after its children have been added to \open.
+A node is removed from \open only after its children have been added to \open. 
 So, if \kastar reaches an iteration when \open is empty it means that some of the $k$ goals are not reachable.
 Thus, \kastar is \emph{complete} in the sense that if it does not find a solution then indeed no solution exists.
 
 \begin{proposition}[Completeness]
   \label{prop:completeness}
-  If a goal is reachable, then it is eventually expanded by \kastar. 
+  If a goal is reachable, then it will eventually be expanded by \kastar. 
 \end{proposition}
 
 % Soundness
@@ -623,17 +611,17 @@ When a state is expanded, it means a path to it has been found.
 Thus, \kastar is \emph{sound}, in the sense that if it returns a solution then that solution contains a path from $s$ to each of the $k$ goals.
 A key question is whether each of these $k$ paths is indeed an optimal path to its corresponding goal. 
 In Section~\ref{sec:aggregating} we prove that 
-using $\Phi$ as defined in Equation~\ref{eq:basic-phi-min} is \emph{admissible}, i.e., indeed leads to returning an optimal path for all goals. In addition, we define sufficient and necessary conditions for admissible aggregation functions, and suggest several alternatives aggregation function that satisfy these conditions. 
+using $\Phi=\min$ as defined in Equation~\ref{eq:basic-phi-min} is \emph{admissible}, i.e., the paths returned by \kastarmin are optimal paths for all goals. In addition, we define sufficient and necessary conditions for admissible aggregation functions, and suggest several alternatives aggregation function that satisfy these conditions. 
 
 %[[AF: In line 23, don't you want to return some of the paths if you have them?]]\roni{I think this will just confuse. The problem is defined for all the $k$ paths.}
 
 % What we have not described yet is how does the parallel search with a single \open aggregates the heuristic values for all goals, and how does the sequential searches choose which goal to solve first. In this work we focus on answering the first question.
 %[[AF: This is indeed a summary and maybe it can be merged above somehow because there is repetition of text. Anyhow, it would be great to give a name to each of them or at least a sequential number.  And, there is a separation between everybody who only share information to KA* which uses one OPEN. This must be clear]]
 
-\section{Aggregating Heuristic Values}
-[[AF: some connecting sentences to tell me where I am??]]
-\input{sec-aggregating}
+%[[AF: some connecting sentences to tell me where I am??]]
 
+\section{Aggregating Heuristic Values}
+\input{sec-aggregating}
 [[AF: again, some connecting sentences can help out here]]
 
 
@@ -655,6 +643,289 @@ In this section we compare analytically the two main approaches we proposed for 
 
 \subsection{Expanded States}
 \label{sec:expandedStates}
+
+
+
+\begin{theorem}
+	\label{the:kastarmin-surely}
+	Let $\Phi$ be a \axiomadm heuristic aggregation function. For any \kgs and for any tuple of admissible heuristics $\vect{h}$, \kastarphi expands all the surely expanded nodes.
+\end{theorem}
+\begin{proof}
+	%  Consider the \open and \closed lists when the last goal is expanded.
+	Let $n$ be a node that is surely expanded w.r.t. some goal $t_i$.
+	That is, $n$ is reachable from $s$ by a path of nodes with $f_i$ values lower than $d(s, t_i)$ and $f_i(n) < d(s, t_i)$.
+	$\Phi$ is \axiomadm so for any node $m$ along this path we have $\Phi(m) \leq \min_{t_j} h_{t_j}(m) \leq h_{t_i}(m)$.
+	Thus, the $F$ values of the nodes along this path must also be lower than $d(s, t_i)$.
+	As all edges in the underlying graph have non-negative cost, $h_{t_i}(t_i) = 0$ and therefore $F(t_i) = d(s, t_i)$.
+	Hence, the minimal $F$ value in \open is $d(s, t_i)$ when $t_i$ is expanded.
+	Thus, all the nodes along the path to $n$ and $n$ itself must have already been expanded, as all of them have $F$ values smaller than $d(s, t_i) = F(t_i)$.
+\end{proof}
+
+
+
+\begin{theorem}
+	\label{the:kastarmin-surplus}
+	For any \kgs and for any tuple of consistent heuristics $\vect{h}$, \kastarmin never expands a surplus state.
+\end{theorem}
+\begin{proof}
+	Let $n$ be a node expanded by \kastarmin.
+	Let $t_i$ be such that $h_{t_i}(n) = \min h_{t_i}(n)$.
+	Applying Lemma~\ref{lem:simple} to $t_i$, we obtain $n_i \in \open$ such that $g(n_i) + d(n_i, t_i) = d(s, t_i)$.
+	For any node $p$ on the path from $s$ to $n$, we have the following derivation.
+	\begin{align}
+	h_{t_i}(p)        & \leq d(p, n) + h_{t_i}(n)         & \text{($h_{t_i}$ is consistent)}\\
+	h_{t_i}(p)        & \leq d(p, n) + \Phi(\vect{h}(n))         & \text{(from the choice of $t_i$)}\\
+	g(p) + h_{t_i}(p) & \leq g(p) + d(p, n) + \Phi(\vect{h}(n)) & \text{}\\
+	g(p) + h_{t_i}(p) & \leq g(n) + \Phi(\vect{h}(n))          & \text{Lemma blabla}\\
+	g(p) + h_{t_i}(p) & \leq F(n)         & \text{(by definition of $F$)}\\
+	g(p) + h_{t_i}(p) & \leq F(n_i) = g(n_i) + \Phi(\vect{h}(n_i))      & \text{($n$ is expanded)}\\
+	g(p) + h_{t_i}(p) & \leq g(n_i) + h_i(n_i) & \text{(by definition of $\Phi$)}\\
+	g(p) + h_{t_i}(p) & \leq g(n_i) + d(n_i, t_i) & \text{($h_{t_i}$ is admissible)}\\
+	g(p) + h_{t_i}(p) & \leq d(s, t_i) & \text{($n_i$ is chosen via Lemma~\ref{lem:simple})}
+	\label{eq:nosurplus}
+	\end{align}
+	Thus, $n$ is not surplus for the SPP $\Pi_i$.
+	Therefore, $n$ is not surplus for the \kgs.
+\end{proof}
+
+Note that our assumption that $h_{t_1}, \ldots h_{t_k}$ are consistent is necessary for the proof of Theorem~\ref{the:kastarmin-surplus}.
+With an admissible but inconsistent heuristic, \kastarmin may, in fact, expand surplus states.
+Figure~\ref{fig:inconsistent} shows a \kgs problem with $k = 2$ where this occurs.
+\kastarmin will expand all states in the figure, while $B$ is surplus for both goals.
+
+\begin{figure}
+	%  \includegraphics[width=\columnwidth]{inconsistent_cropped.pdf}
+	\subfloat{
+		\begin{tikzpicture}
+		\node[source]  (s)  at (0, 2) {$S$};
+		\node[other]   (a)  at (2, 0) {$A$};
+		\node[other]   (b)  at (4, 0) {$B$};
+		\node[target1] (t1) at (0, 0) {$t_1$};
+		\node[target2] (t2) at (3, 2) {$t_2$};
+		
+		\draw[->] (s) -- (a)  node[midway] (sa) {\phantom{0}};
+		\draw[->] (a) -- (b)  node[midway] (ab) {\phantom{0}};
+		\draw[->] (s) -- (t1) node[midway] (st1) {\phantom{0}};
+		\draw[->] (s) -- (t2) node[midway] (st2) {\phantom{0}};
+		
+		\node[above right = -5mm of sa,edgeweight] {$1$};
+		\node[above = -2mm of ab,edgeweight] {$1$};
+		\node[left  = -2mm of st1,edgeweight] {$3$};
+		\node[above = -2mm of st2,edgeweight] {$3$};
+		
+		\node[above = 1mm of  s,infobox] {$\vect{h}=\vect{0}$};
+		\node[below = 0mm of  a,infobox] {$\vect{h}=\tuple{0, 5}$};
+		\node[below = 0mm of  b,infobox] {$\vect{h}=\tuple{5, 0}$};
+		\node[below = 1mm of  t1,infobox] {$\vect{h}=\tuple{0, 5}$};
+		\node[above = 0mm of  t2,infobox] {$\vect{h}=\tuple{5, 0}$};
+		\end{tikzpicture}
+	} \hfill
+	\subfloat{
+		\begin{tabular}[b]{l*8{c}}
+			\toprule
+			\multirow{2}{*}{Path} &     & \multicolumn{2}{c}{\astari{t_1}} & \multicolumn{2}{c}{\astari{t_2}} & \multicolumn{3}{c}{\kastarmin} \\
+			\cmidrule(r){3-4} \cmidrule(lr){5-6} \cmidrule(l){7-9}
+			& $g$ & $f$ & S  & $f$ & S  & $\Phi(\vect{h})$ & $F$ & S \\
+			\midrule
+			$S$    & $0$ & $0$ & \xmark & $0$ & \cmark & $0$ & $0$ & \xmark \\
+			$St_1$ & $3$ & $3$ & \xmark & $8$ & \cmark & $0$ & $3$ & \xmark \\
+			$St_2$ & $3$ & $8$ & \cmark & $3$ & \xmark & $0$ & $3$ & \xmark \\
+			$SA$   & $1$ & $1$ & \xmark & $6$ & \cmark & $0$ & $1$ & \xmark \\
+			$SAB$  & $2$ & $7$ & \cmark & $2$ & \cmark & $0$ & $2$ & \cmark \\
+			\bottomrule
+		\end{tabular}
+	}
+	\caption{An example where \kastarmin expands a surplus state, $B$.
+		The table on the right indicates which nodes are expanded and whether the corresponding state is surplus ($S$) for \astari{t_1}, \astari{t_2}, and \kastarmin.
+		This example relies on the inconsistency of the second heuristic: $h_{t_2}(A) >  d(A, B) + h_{t_2}(B)$.
+	}
+	\label{fig:inconsistent}
+\end{figure}
+
+An equivalent theorem for \kastarmax does not hold.
+Indeed, there are cases where \kastarmax expands surplus states.
+For example, consider the \kgs problem in Figure~\ref{fig:lazy}.
+State $A$ will be expanded first, having $F_{\max}(A) = 4$, followed by $t_2$ ($F_{\max}(t_2) = 10$)), and finally $t_1$ ($F_{\max}(t_1) = 11$).
+However, neither \astari{1} nor \astari{2} will expand $A$.
+Moreover, $A$ is surplus w.r.t. both $\Pi_1$ and $\Pi_2$, since the optimal path to $t_1$ and $t_2$ costs 3 and 1, respectively, while $f_1(A) = 4 > 3$ and $f_2(A) = 2 > 1$.
+
+
+
+\begin{theorem}
+	\label{the:kastarmin-surplus}
+	For any \kgs and for any tuple of consistent heuristics $\vect{h}$, \kastarmin never expands a surplus state.
+\end{theorem}
+\begin{proof}
+	Let $n$ be a node expanded by \kastarmin.
+	Let $t_i$ be such that $h_{t_i}(n) = \min h_{t_i}(n)$.
+	Applying Lemma~\ref{lem:simple} to $t_i$, we obtain $n_i \in \open$ such that $g(n_i) + d(n_i, t_i) = d(s, t_i)$.
+	For any node $p$ on the path from $s$ to $n$, we have the following derivation.
+	\begin{align}
+	h_{t_i}(p)        & \leq d(p, n) + h_{t_i}(n)         & \text{($h_{t_i}$ is consistent)}\\
+	h_{t_i}(p)        & \leq d(p, n) + \Phi(\vect{h}(n))         & \text{(from the choice of $t_i$)}\\
+	g(p) + h_{t_i}(p) & \leq g(p) + d(p, n) + \Phi(\vect{h}(n)) & \text{}\\
+	g(p) + h_{t_i}(p) & \leq g(n) + \Phi(\vect{h}(n))          & \text{Lemma blabla}\\
+	g(p) + h_{t_i}(p) & \leq F(n)         & \text{(by definition of $F$)}\\
+	g(p) + h_{t_i}(p) & \leq F(n_i) = g(n_i) + \Phi(\vect{h}(n_i))      & \text{($n$ is expanded)}\\
+	g(p) + h_{t_i}(p) & \leq g(n_i) + h_i(n_i) & \text{(by definition of $\Phi$)}\\
+	g(p) + h_{t_i}(p) & \leq g(n_i) + d(n_i, t_i) & \text{($h_{t_i}$ is admissible)}\\
+	g(p) + h_{t_i}(p) & \leq d(s, t_i) & \text{($n_i$ is chosen via Lemma~\ref{lem:simple})}
+	\label{eq:nosurplus}
+	\end{align}
+	Thus, $n$ is not surplus for the SPP $\Pi_i$.
+	Therefore, $n$ is not surplus for the \kgs.
+\end{proof}
+
+Note that our assumption that $h_{t_1}, \ldots h_{t_k}$ are consistent is necessary for the proof of Theorem~\ref{the:kastarmin-surplus}.
+With an admissible but inconsistent heuristic, \kastarmin may, in fact, expand surplus states.
+Figure~\ref{fig:inconsistent} shows a \kgs problem with $k = 2$ where this occurs.
+\kastarmin will expand all states in the figure, while $B$ is surplus for both goals.
+
+\begin{figure}
+	%  \includegraphics[width=\columnwidth]{inconsistent_cropped.pdf}
+	\subfloat{
+		\begin{tikzpicture}
+		\node[source]  (s)  at (0, 2) {$S$};
+		\node[other]   (a)  at (2, 0) {$A$};
+		\node[other]   (b)  at (4, 0) {$B$};
+		\node[target1] (t1) at (0, 0) {$t_1$};
+		\node[target2] (t2) at (3, 2) {$t_2$};
+		
+		\draw[->] (s) -- (a)  node[midway] (sa) {\phantom{0}};
+		\draw[->] (a) -- (b)  node[midway] (ab) {\phantom{0}};
+		\draw[->] (s) -- (t1) node[midway] (st1) {\phantom{0}};
+		\draw[->] (s) -- (t2) node[midway] (st2) {\phantom{0}};
+		
+		\node[above right = -5mm of sa,edgeweight] {$1$};
+		\node[above = -2mm of ab,edgeweight] {$1$};
+		\node[left  = -2mm of st1,edgeweight] {$3$};
+		\node[above = -2mm of st2,edgeweight] {$3$};
+		
+		\node[above = 1mm of  s,infobox] {$\vect{h}=\vect{0}$};
+		\node[below = 0mm of  a,infobox] {$\vect{h}=\tuple{0, 5}$};
+		\node[below = 0mm of  b,infobox] {$\vect{h}=\tuple{5, 0}$};
+		\node[below = 1mm of  t1,infobox] {$\vect{h}=\tuple{0, 5}$};
+		\node[above = 0mm of  t2,infobox] {$\vect{h}=\tuple{5, 0}$};
+		\end{tikzpicture}
+	} \hfill
+	\subfloat{
+		\begin{tabular}[b]{l*8{c}}
+			\toprule
+			\multirow{2}{*}{Path} &     & \multicolumn{2}{c}{\astari{t_1}} & \multicolumn{2}{c}{\astari{t_2}} & \multicolumn{3}{c}{\kastarmin} \\
+			\cmidrule(r){3-4} \cmidrule(lr){5-6} \cmidrule(l){7-9}
+			& $g$ & $f$ & S  & $f$ & S  & $\Phi(\vect{h})$ & $F$ & S \\
+			\midrule
+			$S$    & $0$ & $0$ & \xmark & $0$ & \cmark & $0$ & $0$ & \xmark \\
+			$St_1$ & $3$ & $3$ & \xmark & $8$ & \cmark & $0$ & $3$ & \xmark \\
+			$St_2$ & $3$ & $8$ & \cmark & $3$ & \xmark & $0$ & $3$ & \xmark \\
+			$SA$   & $1$ & $1$ & \xmark & $6$ & \cmark & $0$ & $1$ & \xmark \\
+			$SAB$  & $2$ & $7$ & \cmark & $2$ & \cmark & $0$ & $2$ & \cmark \\
+			\bottomrule
+		\end{tabular}
+	}
+	\caption{An example where \kastarmin expands a surplus state, $B$.
+		The table on the right indicates which nodes are expanded and whether the corresponding state is surplus ($S$) for \astari{t_1}, \astari{t_2}, and \kastarmin.
+		This example relies on the inconsistency of the second heuristic: $h_{t_2}(A) >  d(A, B) + h_{t_2}(B)$.
+	}
+	\label{fig:inconsistent}
+\end{figure}
+
+An equivalent theorem for \kastarmax does not hold.
+Indeed, there are cases where \kastarmax expands surplus states.
+For example, consider the \kgs problem in Figure~\ref{fig:lazy}.
+State $A$ will be expanded first, having $F_{\max}(A) = 4$, followed by $t_2$ ($F_{\max}(t_2) = 10$)), and finally $t_1$ ($F_{\max}(t_1) = 11$).
+However, neither \astari{1} nor \astari{2} will expand $A$.
+Moreover, $A$ is surplus w.r.t. both $\Pi_1$ and $\Pi_2$, since the optimal path to $t_1$ and $t_2$ costs 3 and 1, respectively, while $f_1(A) = 4 > 3$ and $f_2(A) = 2 > 1$.
+
+
+
+\begin{theorem}
+	\label{the:kastarmin-surplus}
+	For any \kgs and for any tuple of consistent heuristics $\vect{h}$, \kastarmin never expands a surplus state.
+\end{theorem}
+\begin{proof}
+	Let $n$ be a node expanded by \kastarmin.
+	Let $t_i$ be such that $h_{t_i}(n) = \min h_{t_i}(n)$.
+	Applying Lemma~\ref{lem:simple} to $t_i$, we obtain $n_i \in \open$ such that $g(n_i) + d(n_i, t_i) = d(s, t_i)$.
+	For any node $p$ on the path from $s$ to $n$, we have the following derivation.
+	\begin{align}
+	h_{t_i}(p)        & \leq d(p, n) + h_{t_i}(n)         & \text{($h_{t_i}$ is consistent)}\\
+	h_{t_i}(p)        & \leq d(p, n) + \Phi(\vect{h}(n))         & \text{(from the choice of $t_i$)}\\
+	g(p) + h_{t_i}(p) & \leq g(p) + d(p, n) + \Phi(\vect{h}(n)) & \text{}\\
+	g(p) + h_{t_i}(p) & \leq g(n) + \Phi(\vect{h}(n))          & \text{Lemma blabla}\\
+	g(p) + h_{t_i}(p) & \leq F(n)         & \text{(by definition of $F$)}\\
+	g(p) + h_{t_i}(p) & \leq F(n_i) = g(n_i) + \Phi(\vect{h}(n_i))      & \text{($n$ is expanded)}\\
+	g(p) + h_{t_i}(p) & \leq g(n_i) + h_i(n_i) & \text{(by definition of $\Phi$)}\\
+	g(p) + h_{t_i}(p) & \leq g(n_i) + d(n_i, t_i) & \text{($h_{t_i}$ is admissible)}\\
+	g(p) + h_{t_i}(p) & \leq d(s, t_i) & \text{($n_i$ is chosen via Lemma~\ref{lem:simple})}
+	\label{eq:nosurplus}
+	\end{align}
+	Thus, $n$ is not surplus for the SPP $\Pi_i$.
+	Therefore, $n$ is not surplus for the \kgs.
+\end{proof}
+
+Note that our assumption that $h_{t_1}, \ldots h_{t_k}$ are consistent is necessary for the proof of Theorem~\ref{the:kastarmin-surplus}.
+With an admissible but inconsistent heuristic, \kastarmin may, in fact, expand surplus states.
+Figure~\ref{fig:inconsistent} shows a \kgs problem with $k = 2$ where this occurs.
+\kastarmin will expand all states in the figure, while $B$ is surplus for both goals.
+
+\begin{figure}
+	%  \includegraphics[width=\columnwidth]{inconsistent_cropped.pdf}
+	\subfloat{
+		\begin{tikzpicture}
+		\node[source]  (s)  at (0, 2) {$S$};
+		\node[other]   (a)  at (2, 0) {$A$};
+		\node[other]   (b)  at (4, 0) {$B$};
+		\node[target1] (t1) at (0, 0) {$t_1$};
+		\node[target2] (t2) at (3, 2) {$t_2$};
+		
+		\draw[->] (s) -- (a)  node[midway] (sa) {\phantom{0}};
+		\draw[->] (a) -- (b)  node[midway] (ab) {\phantom{0}};
+		\draw[->] (s) -- (t1) node[midway] (st1) {\phantom{0}};
+		\draw[->] (s) -- (t2) node[midway] (st2) {\phantom{0}};
+		
+		\node[above right = -5mm of sa,edgeweight] {$1$};
+		\node[above = -2mm of ab,edgeweight] {$1$};
+		\node[left  = -2mm of st1,edgeweight] {$3$};
+		\node[above = -2mm of st2,edgeweight] {$3$};
+		
+		\node[above = 1mm of  s,infobox] {$\vect{h}=\vect{0}$};
+		\node[below = 0mm of  a,infobox] {$\vect{h}=\tuple{0, 5}$};
+		\node[below = 0mm of  b,infobox] {$\vect{h}=\tuple{5, 0}$};
+		\node[below = 1mm of  t1,infobox] {$\vect{h}=\tuple{0, 5}$};
+		\node[above = 0mm of  t2,infobox] {$\vect{h}=\tuple{5, 0}$};
+		\end{tikzpicture}
+	} \hfill
+	\subfloat{
+		\begin{tabular}[b]{l*8{c}}
+			\toprule
+			\multirow{2}{*}{Path} &     & \multicolumn{2}{c}{\astari{t_1}} & \multicolumn{2}{c}{\astari{t_2}} & \multicolumn{3}{c}{\kastarmin} \\
+			\cmidrule(r){3-4} \cmidrule(lr){5-6} \cmidrule(l){7-9}
+			& $g$ & $f$ & S  & $f$ & S  & $\Phi(\vect{h})$ & $F$ & S \\
+			\midrule
+			$S$    & $0$ & $0$ & \xmark & $0$ & \cmark & $0$ & $0$ & \xmark \\
+			$St_1$ & $3$ & $3$ & \xmark & $8$ & \cmark & $0$ & $3$ & \xmark \\
+			$St_2$ & $3$ & $8$ & \cmark & $3$ & \xmark & $0$ & $3$ & \xmark \\
+			$SA$   & $1$ & $1$ & \xmark & $6$ & \cmark & $0$ & $1$ & \xmark \\
+			$SAB$  & $2$ & $7$ & \cmark & $2$ & \cmark & $0$ & $2$ & \cmark \\
+			\bottomrule
+		\end{tabular}
+	}
+	\caption{An example where \kastarmin expands a surplus state, $B$.
+		The table on the right indicates which nodes are expanded and whether the corresponding state is surplus ($S$) for \astari{t_1}, \astari{t_2}, and \kastarmin.
+		This example relies on the inconsistency of the second heuristic: $h_{t_2}(A) >  d(A, B) + h_{t_2}(B)$.
+	}
+	\label{fig:inconsistent}
+\end{figure}
+
+An equivalent theorem for \kastarmax does not hold.
+Indeed, there are cases where \kastarmax expands surplus states.
+For example, consider the \kgs problem in Figure~\ref{fig:lazy}.
+State $A$ will be expanded first, having $F_{\max}(A) = 4$, followed by $t_2$ ($F_{\max}(t_2) = 10$)), and finally $t_1$ ($F_{\max}(t_1) = 11$).
+However, neither \astari{1} nor \astari{2} will expand $A$.
+Moreover, $A$ is surplus w.r.t. both $\Pi_1$ and $\Pi_2$, since the optimal path to $t_1$ and $t_2$ costs 3 and 1, respectively, while $f_1(A) = 4 > 3$ and $f_2(A) = 2 > 1$.
+
+
 
 [[AF: what about new variants that came out from the previous section][]
 
